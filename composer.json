@@ -1,0 +1,23 @@
+{
+    "name": "skrz/autowiring-bundle",
+    "description": "Symfony bundle providing autowiring/autoscanning capabilities to DI container",
+    "minimum-stability": "stable",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jakub Kulhan",
+            "email": "jakub.kulhan@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.4",
+        "doctrine/annotations": "~1.2",
+        "symfony/config": "*",
+        "symfony/dependency-injection": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Skrz\\Bundle\\AutowiringBundle\\": ""
+        }
+    }
+}
