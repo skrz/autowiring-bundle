@@ -15,7 +15,7 @@ $ composer require skrz/autowiring-bundle:@dev
 
 Then add `AutowiringBundle` to Symfony Kernel:
 
-    use Skrz\Bundle\AutowiringBundle\AutowiringBundle;
+    use Skrz\Bundle\AutowiringBundle\SkrzAutowiringBundle;
 
     class AppKernel
     {
@@ -24,7 +24,7 @@ Then add `AutowiringBundle` to Symfony Kernel:
         {
             return [
                 ...
-                new AutowiringBundle()
+                new SkrzAutowiringBundle()
                 ...
             ];
         }
