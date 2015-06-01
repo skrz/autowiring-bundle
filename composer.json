@@ -12,8 +12,8 @@
     "require": {
         "php": ">=5.4",
         "doctrine/annotations": "~1.2",
-        "symfony/config": "*",
-        "symfony/dependency-injection": "*"
+        "symfony/config": "~2.7",
+        "symfony/dependency-injection": "~2.7"
     },
     "autoload": {
         "psr-4": {

@@ -78,9 +78,9 @@ class AutowiringCompilerPass implements CompilerPassInterface
 				!$definition->isPublic() ||
 				!$definition->getClass() ||
 				$definition->getFactory() ||
-				$definition->getFactoryClass() ||
-				$definition->getFactoryService() ||
-				$definition->getFactoryMethod()
+				$definition->getFactoryClass(false) ||
+				$definition->getFactoryService(false) ||
+				$definition->getFactoryMethod(false)
 			) {
 				continue;
 			}
