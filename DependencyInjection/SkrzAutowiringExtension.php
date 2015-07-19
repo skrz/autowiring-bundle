@@ -9,7 +9,7 @@ use Symfony\Component\DependencyInjection\Extension\Extension;
 /**
  * @author Jakub Kulhan <jakub.kulhan@gmail.com>
  */
-class AutowiringExtension extends Extension implements ConfigurationInterface
+class SkrzAutowiringExtension extends Extension implements ConfigurationInterface
 {
 
 	/**
@@ -44,7 +44,6 @@ class AutowiringExtension extends Extension implements ConfigurationInterface
 	public function load(array $config, ContainerBuilder $container)
 	{
 		$autowiringConfig = $this->processConfiguration($this, $config);
-
 		$container->setParameter("autowiring.ignored_services", $autowiringConfig["ignored_services"]);
 		$container->setParameter("autowiring.preferred_services", $autowiringConfig["preferred_services"]);
 		$container->setParameter("autowiring.autoscan_psr4", $autowiringConfig["autoscan_psr4"]);
