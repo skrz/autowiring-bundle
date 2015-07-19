@@ -1,7 +1,6 @@
 {
     "name": "skrz/autowiring-bundle",
     "description": "Symfony bundle providing autowiring/autoscanning capabilities to DI container",
-    "minimum-stability": "stable",
     "license": "MIT",
     "authors": [
         {
