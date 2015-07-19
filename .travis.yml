@@ -6,6 +6,10 @@ php:
   - 7.0
   - hhvm
 
+cache:
+  directories:
+    - $HOME/.composer/cache
+
 env:
   matrix:
     - PREFER_LOWEST="--prefer-lowest"
@@ -17,7 +21,7 @@ matrix:
     - php: 7.0
 
 install:
-  - composer update --prefer-source $PREFER_LOWEST
+  - composer update $PREFER_LOWEST
 
 script:
   - phpunit
