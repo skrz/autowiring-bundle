@@ -1,5 +1,5 @@
 <?php
-namespace Skrz\Bundle\AutowiringBundle;
+namespace Skrz\Bundle\AutowiringBundle\DependencyInjection;
 
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
@@ -12,6 +12,9 @@ use Symfony\Component\DependencyInjection\Extension\Extension;
 class AutowiringExtension extends Extension implements ConfigurationInterface
 {
 
+	/**
+	 * {@inheritdoc}
+	 */
 	public function getConfigTreeBuilder()
 	{
 		$treeBuilder = new TreeBuilder();
@@ -35,6 +38,9 @@ class AutowiringExtension extends Extension implements ConfigurationInterface
 		return $treeBuilder;
 	}
 
+	/**
+	 * {@inheritdoc}
+	 */
 	public function load(array $config, ContainerBuilder $container)
 	{
 		$autowiringConfig = $this->processConfiguration($this, $config);

@@ -1,8 +1,10 @@
 <?php
-namespace Skrz\Bundle\AutowiringBundle;
+namespace Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler;
 
 use Doctrine\Common\Annotations\AnnotationReader;
 use Skrz\Bundle\AutowiringBundle\Annotation\Component;
+use Skrz\Bundle\AutowiringBundle\DependencyInjection\ClassMultiMap;
+use Skrz\Bundle\AutowiringBundle\Exception\AutowiringException;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;

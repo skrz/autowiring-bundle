@@ -1,10 +1,14 @@
 <?php
-namespace Skrz\Bundle\AutowiringBundle;
+namespace Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler;
 
 use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\Common\Annotations\PhpParser;
 use Skrz\Bundle\AutowiringBundle\Annotation\Autowired;
 use Skrz\Bundle\AutowiringBundle\Annotation\Value;
+use Skrz\Bundle\AutowiringBundle\DependencyInjection\ClassMultiMap;
+use Skrz\Bundle\AutowiringBundle\Exception\AutowiringException;
+use Skrz\Bundle\AutowiringBundle\Exception\MultipleValuesException;
+use Skrz\Bundle\AutowiringBundle\Exception\NoValueException;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;

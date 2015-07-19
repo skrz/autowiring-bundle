@@ -1,6 +1,7 @@
 <?php
-namespace Skrz\Bundle\AutowiringBundle;
+namespace Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler;
 
+use Skrz\Bundle\AutowiringBundle\DependencyInjection\ClassMultiMap;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
