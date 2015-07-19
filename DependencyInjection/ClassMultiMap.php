@@ -13,8 +13,8 @@ use Skrz\Bundle\AutowiringBundle\Exception\NoValueException;
 class ClassMultiMap
 {
 
-	/** @var array */
-  	private $classes = array();
+	/** @var string[] */
+	private $classes = [];
 
 	/**
 	 * @param string $className
@@ -22,21 +22,21 @@ class ClassMultiMap
 	 */
 	public function put($className, $value)
 	{
-		$rc = new ReflectionClass($className);
+		$reflectionClass = new ReflectionClass($className);
 
-		foreach ($rc->getInterfaceNames() as $interfaceName) {
+		foreach ($reflectionClass->getInterfaceNames() as $interfaceName) {
 			if (!isset($this->classes[$interfaceName])) {
-				$this->classes[$interfaceName] = array();
+				$this->classes[$interfaceName] = [];
 			}
 			$this->classes[$interfaceName][] = $value;
 		}
 
 		do {
-			if (!isset($this->classes[$rc->getName()])) {
-				$this->classes[$rc->getName()] = array();
+			if (!isset($this->classes[$reflectionClass->getName()])) {
+				$this->classes[$reflectionClass->getName()] = [];
 			}
-			$this->classes[$rc->getName()][] = $value;
-		} while ($rc = $rc->getParentClass());
+			$this->classes[$reflectionClass->getName()][] = $value;
+		} while ($reflectionClass = $reflectionClass->getParentClass());
 	}
 
 	/**
@@ -46,13 +46,13 @@ class ClassMultiMap
 	public function getSingle($className)
 	{
 		if (!isset($this->classes[$className])) {
-			throw new NoValueException("Key '{$className}'.");
+			throw new NoValueException(sprintf("Key '%s'.", $className));
 		}
 
 		$values = $this->classes[$className];
 
 		if (count($values) > 1) {
-			throw new MultipleValuesException("Key '{$className}' - values: " . json_encode($values) . ".");
+			throw new MultipleValuesException(sprintf("Key '%s' - values: '%s'", $className, json_encode($values)));
 		}
 
 		return reset($values);
@@ -65,7 +65,7 @@ class ClassMultiMap
 	public function getMulti($className)
 	{
 		if (!isset($this->classes[$className])) {
-			return array();
+			return [];
 		}
 
 		return $this->classes[$className];

@@ -3,6 +3,9 @@ namespace Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler;
 
 use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\Common\Annotations\PhpParser;
+use ReflectionClass;
+use ReflectionMethod;
+use RuntimeException;
 use Skrz\Bundle\AutowiringBundle\Annotation\Autowired;
 use Skrz\Bundle\AutowiringBundle\Annotation\Value;
 use Skrz\Bundle\AutowiringBundle\DependencyInjection\ClassMultiMap;
@@ -47,13 +50,13 @@ class AutowiringCompilerPass implements CompilerPassInterface
 
 		try {
 			$ignoredServicePatterns = (array)$parameterBag->resolveValue("%autowiring.ignored_services%");
-		} catch (ParameterNotFoundException $e) {
+		} catch (ParameterNotFoundException $exception) {
 			$ignoredServicePatterns = [];
 		}
 
 		try {
 			$preferredServices = (array)$parameterBag->resolveValue("%autowiring.preferred_services%");
-		} catch (ParameterNotFoundException $e) {
+		} catch (ParameterNotFoundException $exception) {
 			$preferredServices = [];
 		}
 
@@ -61,7 +64,7 @@ class AutowiringCompilerPass implements CompilerPassInterface
 			$fastAnnotationChecksRegex = "/" . implode("|", array_map(function ($s) {
 					return preg_quote($s);
 				}, (array)$parameterBag->resolveValue("%autowiring.fast_annotation_checks%"))) . "/";
-		} catch (ParameterNotFoundException $e) {
+		} catch (ParameterNotFoundException $exception) {
 			$fastAnnotationChecksRegex = null;
 		}
 
@@ -91,11 +94,11 @@ class AutowiringCompilerPass implements CompilerPassInterface
 
 			try {
 				$className = $parameterBag->resolveValue($definition->getClass());
-				$rc = new \ReflectionClass($className);
+				$reflectionClass = new ReflectionClass($className);
 
 				$this->autowireClass(
 					$className,
-					$rc,
+					$reflectionClass,
 					$definition,
 					$fastAnnotationChecksRegex,
 					$preferredServices,
@@ -103,75 +106,86 @@ class AutowiringCompilerPass implements CompilerPassInterface
 				);
 
 				// add files to cache
-				$container->addClassResource($rc);
+				$container->addClassResource($reflectionClass);
 
-			} catch (AutowiringException $e) {
+			} catch (AutowiringException $exception) {
 				throw new AutowiringException(
-					$e->getMessage() . " (service: {$serviceId})",
-					$e->getCode(), $e
+                    sprintf("%s (service: %s)", $exception->getMessage(), $serviceId),
+					$exception->getCode(), $exception
 				);
 			}
 		}
 	}
 
-	private function autowireClass($className, \ReflectionClass $rc, Definition $definition, $fastAnnotationChecksRegex, $preferredServices, ParameterBagInterface $parameterBag)
+	/**
+	 * @param string $className
+	 * @param ReflectionClass $reflectionClass
+	 * @param Definition $definition
+	 * @param string $fastAnnotationChecksRegex
+	 * @param string[] $preferredServices
+	 * @param ParameterBagInterface $parameterBag
+	 */
+	private function autowireClass($className, ReflectionClass $reflectionClass, Definition $definition, $fastAnnotationChecksRegex, $preferredServices, ParameterBagInterface $parameterBag)
 	{
 		// constructor - autowire always
-		if ($rc->getConstructor()) {
+		if ($reflectionClass->getConstructor()) {
 			$definition->setArguments(
-				$this->autowireMethod($className, $rc->getConstructor(), $definition->getArguments(), $preferredServices)
+				$this->autowireMethod($className, $reflectionClass->getConstructor(), $definition->getArguments(), $preferredServices)
 			);
 		}
 
 		if ($fastAnnotationChecksRegex === null ||
-			($rc->getDocComment() && preg_match($fastAnnotationChecksRegex, $rc->getDocComment()))
+			($reflectionClass->getDocComment() && preg_match($fastAnnotationChecksRegex, $reflectionClass->getDocComment()))
 		) {
 			// method calls @Autowired
-			foreach ($rc->getMethods(\ReflectionMethod::IS_PUBLIC) as $rm) {
-				if ($rm->getName() === "__construct") {
+			foreach ($reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC) as $reflectionMethod) {
+				if ($reflectionMethod->getName() === "__construct") {
 					continue;
 				}
 
-				if ($definition->hasMethodCall($rm->getName())) {
+				if ($definition->hasMethodCall($reflectionMethod->getName())) {
 					continue;
 				}
 
-				if (strpos($rm->getDocComment(), "@Autowired") === false) {
+				if (strpos($reflectionMethod->getDocComment(), "@Autowired") === false) {
 					continue;
 				}
 
 				/** @var Autowired $annotation */
-				if (($annotation = $this->annotationReader->getMethodAnnotation($rm, "Skrz\\Bundle\\AutowiringBundle\\Annotation\\Autowired")) === null) {
+				if (($annotation = $this->annotationReader->getMethodAnnotation($reflectionMethod,  Autowired::class)) === null) {
 					continue;
 				}
 
 				if ($annotation->name !== null) {
 					throw new AutowiringException(
-						"@Autowired parameter can be used only on properties. " .
-						"{$className}::{$rm->getName()}(...)"
+                        sprintf(
+                            "@Autowired parameter can be used only on properties. %s::%s(...)",
+                            $className,
+                            $reflectionMethod->getName()
+                        )
 					);
 				}
 
 				$definition->addMethodCall(
-					$rm->getName(),
-					$this->autowireMethod($className, $rm, $definition->getArguments(), $preferredServices)
+					$reflectionMethod->getName(),
+					$this->autowireMethod($className, $reflectionMethod, $definition->getArguments(), $preferredServices)
 				);
 			}
 
 			// properties @Autowired, @Value
 			$manualProperties = $definition->getProperties();
-			foreach ($rc->getProperties() as $rp) {
-				if (isset($manualProperties[$rp->getName()])) {
+			foreach ($reflectionClass->getProperties() as $reflectionProperty) {
+				if (isset($manualProperties[$reflectionProperty->getName()])) {
 					continue;
 				}
 
-				if (strpos($rp->getDocComment(), "@Autowired") === false &&
-					strpos($rp->getDocComment(), "@Value") === false
+				if (strpos($reflectionProperty->getDocComment(), "@Autowired") === false &&
+					strpos($reflectionProperty->getDocComment(), "@Value") === false
 				) {
 					continue;
 				}
 
-				$annotations = $this->annotationReader->getPropertyAnnotations($rp);
+				$annotations = $this->annotationReader->getPropertyAnnotations($reflectionProperty);
 
 				$autowiredAnnotation = false;
 				$valueAnnotation = false;
@@ -189,15 +203,15 @@ class AutowiringCompilerPass implements CompilerPassInterface
 						try {
 							if ($annotation->name !== null) {
 								$definition->setProperty(
-									$rp->getName(),
+									$reflectionProperty->getName(),
 									new Reference($annotation->name)
 								);
 							} else {
 								$definition->setProperty(
-									$rp->getName(),
+									$reflectionProperty->getName(),
 									$this->getValue(
-										$rp->getDeclaringClass(),
-										$rp->getDocComment(),
+										$reflectionProperty->getDeclaringClass(),
+										$reflectionProperty->getDocComment(),
 										null,
 										null,
 										false,
@@ -207,10 +221,10 @@ class AutowiringCompilerPass implements CompilerPassInterface
 								);
 							}
 
-						} catch (AutowiringException $e) {
+						} catch (AutowiringException $exception) {
 							throw new AutowiringException(
-								$e->getMessage() . " (Property {$className}::\${$rp->getName()})",
-								$e->getCode(), $e
+                                sprintf("%s (Property %s::$%s)", $exception->getMessage(), $className, $reflectionProperty->getName()),
+								$exception->getCode(), $exception
 							);
 						}
 
@@ -222,13 +236,13 @@ class AutowiringCompilerPass implements CompilerPassInterface
 
 						try {
 							$definition->setProperty(
-								$rp->getName(),
+								$reflectionProperty->getName(),
 								$parameterBag->resolveValue($annotation->value)
 							);
-						} catch (\RuntimeException $e) {
+						} catch (RuntimeException $exception) {
 							throw new AutowiringException(
-								$e->getMessage() . " (Property {$className}::\${$rp->getName()})",
-								$e->getCode(), $e
+                                sprintf("%s (Property %s::$%s)", $exception->getMessage(), $className, $reflectionProperty->getName()),
+								$exception->getCode(), $exception
 							);
 						}
 					}
@@ -236,8 +250,11 @@ class AutowiringCompilerPass implements CompilerPassInterface
 
 				if ($incorrectUsage) {
 					throw new AutowiringException(
-						"Property can have either @Autowired, or @Value annotation, not both. (Property " .
-						$className . "::\$" . $rp->getName() . ")."
+                        sprintf(
+                            "Property can have either @Autowired, or @Value annotation, not both. (Property %s::\$%s)",
+						    $className,
+                            $reflectionProperty->getName()
+                        )
 					);
 				}
 			}
@@ -245,11 +262,18 @@ class AutowiringCompilerPass implements CompilerPassInterface
 		}
 	}
 
-	private function autowireMethod($className, \ReflectionMethod $rm, $arguments, $preferredServices)
+	/**
+	 * @param string $className
+	 * @param ReflectionMethod $reflectionMethod
+	 * @param array $arguments
+	 * @param string[] $preferredServices
+	 * @return array
+	 */
+	private function autowireMethod($className, ReflectionMethod $reflectionMethod, array $arguments, $preferredServices)
 	{
 		$outputArguments = [];
 
-		foreach ($rm->getParameters() as $i => $rp) {
+		foreach ($reflectionMethod->getParameters() as $i => $reflectionProperty) {
 			// intentionally array_key_exists() instead of isset(), isset() would return false if argument is null
 			if (array_key_exists($i, $arguments)) {
 				$outputArguments[$i] = $arguments[$i];
@@ -257,22 +281,22 @@ class AutowiringCompilerPass implements CompilerPassInterface
 			} else {
 				try {
 					$outputArguments[$i] = $this->getValue(
-						$rp->getDeclaringClass(),
-						$rm->getDocComment(),
-						$rp->getName(), $rp->getClass(),
-						$rp->isDefaultValueAvailable(),
-						$rp->isDefaultValueAvailable() ? $rp->getDefaultValue() : null,
+						$reflectionProperty->getDeclaringClass(),
+						$reflectionMethod->getDocComment(),
+						$reflectionProperty->getName(), $reflectionProperty->getClass(),
+						$reflectionProperty->isDefaultValueAvailable(),
+						$reflectionProperty->isDefaultValueAvailable() ? $reflectionProperty->getDefaultValue() : null,
 						$preferredServices
 					);
 
-				} catch (AutowiringException $e) {
+				} catch (AutowiringException $exception) {
 					throw new AutowiringException(
-						$e->getMessage() . " ({$className}::{$rm->getName()}(" .
-						($rp->getPosition() !== 0 ? "..., " : "") .
-						"\${$rp->getName()}" .
-						($rp->getPosition() < $rm->getNumberOfParameters() - 1 ? ", ..." : "") .
+						$exception->getMessage() . " ({$className}::{$reflectionMethod->getName()}(" .
+						($reflectionProperty->getPosition() !== 0 ? "..., " : "") .
+						"\${$reflectionProperty->getName()}" .
+						($reflectionProperty->getPosition() < $reflectionMethod->getNumberOfParameters() - 1 ? ", ..." : "") .
 						")",
-						$e->getCode(), $e
+						$exception->getCode(), $exception
 					);
 				}
 			}
@@ -282,26 +306,31 @@ class AutowiringCompilerPass implements CompilerPassInterface
 	}
 
 	/**
-	 * @param \ReflectionClass $rc
+	 * @param ReflectionClass $reflectionClass
 	 * @param string $docComment
 	 * @param string $parameterName
-	 * @param \ReflectionClass $parameterRc
+	 * @param ReflectionClass $parameterReflectionClass
 	 * @param mixed $defaultValueAvailable
 	 * @param mixed $defaultValue
 	 * @param $preferredServices
-	 * @internal param \ReflectionClass $rc
-	 * @internal param bool $parameterIsArray
 	 * @return mixed
 	 */
-	private function getValue($rc, $docComment, $parameterName, $parameterRc, $defaultValueAvailable, $defaultValue, $preferredServices)
-	{
+	private function getValue(
+        ReflectionClass $reflectionClass,
+        $docComment,
+        $parameterName,
+        ReflectionClass $parameterReflectionClass,
+        $defaultValueAvailable,
+        $defaultValue,
+        $preferredServices
+    ) {
 		$className = null;
 		$isArray = false;
 
 		// resolve class name, whether value is array
 		if ($parameterName !== null) { // parse parameter class
-			if ($parameterRc) {
-				$className = $parameterRc->getName();
+			if ($parameterReflectionClass) {
+				$className = $parameterReflectionClass->getName();
 
 			} elseif (preg_match("/@param\\s+([a-zA-Z0-9\\\\_]+)(\\[\\])?(\\|[^\\s]+)*\\s+\\\$" . preg_quote($parameterName) . "/", $docComment, $m)) {
 				$className = $m[1];
@@ -327,11 +356,11 @@ class AutowiringCompilerPass implements CompilerPassInterface
 
 		// resolve class name to FQN
 		$lowerClassName = trim(strtolower($className), "\\ \t\n");
-		$useStatements = $this->getUseStatements($rc);
+		$useStatements = $this->getUseStatements($reflectionClass);
 		if (isset($useStatements[$lowerClassName])) {
 			$className = $useStatements[$lowerClassName];
 		} elseif (strpos($className, "\\") === false) {
-			$className = $rc->getNamespaceName() . "\\" . $className;
+			$className = $reflectionClass->getNamespaceName() . "\\" . $className;
 		}
 
 		$className = trim($className, "\\");
@@ -346,18 +375,18 @@ class AutowiringCompilerPass implements CompilerPassInterface
 			try {
 				return new Reference($this->classMap->getSingle($className));
 
-			} catch (NoValueException $e) {
+			} catch (NoValueException $exception) {
 				if ($defaultValueAvailable) {
 					return $defaultValue;
 				} else {
-					throw new AutowiringException("Missing service of type '{$className}'.");
+					throw new AutowiringException(sprintf("Missing service of type '%s'.", $className));
 				}
 
-			} catch (MultipleValuesException $e) {
+			} catch (MultipleValuesException $exception) {
 				if (isset($preferredServices[$className])) {
 					return new Reference($preferredServices[$className]);
 				} else {
-					throw new AutowiringException("Multiple services of type '{$className}'.");
+					throw new AutowiringException(sprintf("Multiple services of type '%s'.", $className));
 				}
 			}
 
@@ -369,13 +398,17 @@ class AutowiringCompilerPass implements CompilerPassInterface
 		}
 	}
 
-	public function getUseStatements(\ReflectionClass $rc)
+    /**
+     * @param ReflectionClass $reflectionClass
+     * @return string[]
+     */
+	public function getUseStatements(ReflectionClass $reflectionClass)
 	{
-		if (!isset($this->cachedUseStatements[$rc->getName()])) {
-			$this->cachedUseStatements[$rc->getName()] = $this->phpParser->parseClass($rc);
+		if (!isset($this->cachedUseStatements[$reflectionClass->getName()])) {
+			$this->cachedUseStatements[$reflectionClass->getName()] = $this->phpParser->parseClass($reflectionClass);
 		}
 
-		return $this->cachedUseStatements[$rc->getName()];
+		return $this->cachedUseStatements[$reflectionClass->getName()];
 	}
 
 }

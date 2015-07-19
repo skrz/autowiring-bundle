@@ -31,7 +31,6 @@ class AutoscanCompilerPass implements CompilerPassInterface
 	public function process(ContainerBuilder $container)
 	{
 		$parameterBag = $container->getParameterBag();
-
 		try {
 			$autoscanPsr4 = (array)$parameterBag->resolveValue("%autowiring.autoscan_psr4%");
 		} catch (ParameterNotFoundException $e) {
