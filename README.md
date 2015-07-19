@@ -10,76 +10,82 @@
 Add as [Composer](https://getcomposer.org/) dependency:
 
 ```sh
-$ composer require skrz/autowiring-bundle:@dev
+$ composer require skrz/autowiring-bundle
 ```
 
 Then add `AutowiringBundle` to Symfony Kernel:
 
-    use Skrz\Bundle\AutowiringBundle\SkrzAutowiringBundle;
+```php
+use Skrz\Bundle\AutowiringBundle\SkrzAutowiringBundle;
 
-    class AppKernel
+class AppKernel
+{
+
+    public function registerBundles()
     {
-
-        public function registerBundles()
-        {
-            return [
-                ...
-                new SkrzAutowiringBundle()
-                ...
-            ];
-        }
-
+        return [
+            ...
+            new SkrzAutowiringBundle()
+            ...
+        ];
     }
 
+}
+```
 
 ## Usage
 
 Annotate your application components using `@Component` annotation and its subclasses - they are called "stereotypes".
 Predefined stereotypes are `@Controller`, `@Repository`, and `@Service`, e.g.:
 
-    use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
+```php
+use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
 
-    /**
-     * @Controller
-     */
-    class HomepageController
-    {
-        ...
-    }
+/**
+ * @Controller
+ */
+class HomepageController
+{
+    ...
+}
+```
 
 Create your own application stereotypes by subclassing `@Component`.
 
 ### Constructor dependency injection
 
-`services.yml`:
+```yaml
+// services.yml
+services:
+  controller.homepage:
+    class: HomepageController
+```
 
-    services:
-      controller.homepage:
-        class: HomepageController
+```php
+// HomepageController.php
 
-`HomepageController.php`:
+use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
 
-    use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
+/**
+ * @Controller
+ */
+class HomepageController
+{
 
     /**
-     * @Controller
+     * @var SomeService
      */
-    class HomepageController
+    private $someService;
+
+    public function __construct(SomeService $someService)
     {
-
-        /**
-         * @var SomeService
-         */
-        private $someService;
-
-        public function __construct(SomeService $someService)
-        {
-            $this->someService = $someService;
-        }
-
-        ...
-
+        $this->someService = $someService;
     }
+
+    ...
+
+}
+```
 
 `SomeService` is automatically injected into `HomepageController` instance during creation in container.
 
@@ -88,170 +94,187 @@ do not want the constructor to be autowired, add the service to `ignored_service
 
 ### Method dependency injection
 
-`services.yml`:
+```yaml
+// services.yml
 
-    services:
-      controller.homepage:
-        class: HomepageController
+services:
+  controller.homepage:
+    class: HomepageController
+```
 
-`HomepageController.php`:
+```php
+// HomepageController.php
 
-    use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
-    use Skrz\Bundle\AutowiringBundle\Annotation\Autowired;
+use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
+use Skrz\Bundle\AutowiringBundle\Annotation\Autowired;
+
+/**
+ * @Controller
+ */
+class HomepageController
+{
 
     /**
-     * @Controller
+     * @var SomeService
      */
-    class HomepageController
+    private $someService;
+
+    /**
+     * @param SomeService $someService
+     * @return void
+     *
+     * @Autowired
+     */
+    public function setSomeService(SomeService $someService)
     {
-
-        /**
-         * @var SomeService
-         */
-        private $someService;
-
-        /**
-         * @param SomeService $someService
-         * @return void
-         *
-         * @Autowired
-         */
-        public function setSomeService(SomeService $someService)
-        {
-            $this->someService = $someService;
-        }
-
-        ...
-
+        $this->someService = $someService;
     }
+
+    ...
+
+}
+```
 
 ### Property dependency injection
 
-`services.yml`:
+```yaml
+// services.yml
 
-    services:
-      controller.homepage:
-        class: HomepageController
+services:
+  controller.homepage:
+    class: HomepageController
+```
 
-`HomepageController.php`:
+```php
+// HomepageController.php
 
-    use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
-    use Skrz\Bundle\AutowiringBundle\Annotation\Autowired;
+use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
+use Skrz\Bundle\AutowiringBundle\Annotation\Autowired;
+
+/**
+ * @Controller
+ */
+class HomepageController
+{
 
     /**
-     * @Controller
+     * @var SomeService
+     *
+     * @Autowired
      */
-    class HomepageController
-    {
+    public $someService;
 
-        /**
-         * @var SomeService
-         *
-         * @Autowired
-         */
-        public $someService;
+    ...
 
-        ...
+}
+```
 
-    }
-    
 Note: using property dependency injection is quite addictive.
 
 ### Property parameter injection
 
 You can also inject container parameters using `@Value` annotation.
 
-`services.yml`:
+```yml
+// services.yml
 
-    services:
-      controller.homepage:
-        class: HomepageController
+services:
+  controller.homepage:
+    class: HomepageController
+```
 
-`HomepageController.php`:
+```php
+// HomepageController.php
 
-    use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
-    use Skrz\Bundle\AutowiringBundle\Annotation\Value;
+use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
+use Skrz\Bundle\AutowiringBundle\Annotation\Value;
+
+/**
+ * @Controller
+ */
+class HomepageController
+{
 
     /**
-     * @Controller
+     * @var string
+     *
+     * @Value("%kernel.root_dir%")
      */
-    class HomepageController
-    {
+    public $rootDir;
 
-        /**
-         * @var string
-         *
-         * @Value("%kernel.root_dir%")
-         */
-        public $rootDir;
+    ...
 
-        ...
+}
+```
 
-    }
-    
 Protip: inject always scalar values, do not inject arrays. When you inject scalar values, their presence in container
 is validated during container compilation.
 
 ### Autoscan
 
-`services.yml`:
+```yml
+// services.yml
 
-    autowiring:
-      autoscan_psr4:
-        "": %kernel.root_dir%/path/to/controllers
+autowiring:
+  autoscan_psr4:
+    "": %kernel.root_dir%/path/to/controllers
+```
 
+```php
+// HomepageController.php
 
-`HomepageController.php`:
+use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
+use Skrz\Bundle\AutowiringBundle\Annotation\Autowired;
 
-    use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
-    use Skrz\Bundle\AutowiringBundle\Annotation\Autowired;
+/**
+ * @Controller
+ */
+class HomepageController
+{
 
     /**
-     * @Controller
+     * @var SomeService
+     *
+     * @Autowired
      */
-    class HomepageController
-    {
+    public $someService;
 
-        /**
-         * @var SomeService
-         *
-         * @Autowired
-         */
-        public $someService;
+    ...
 
-        ...
-
-    }
+}
+```
         
 ## Configuration
 
-    # container extension key is "autowiring"
-    autowiring:
+```yml
+# container extension key is "autowiring"
+autowiring:
 
-      # these service IDs won't be processed by autowiring
-      ignored_services:
-        # either specify exact service IDs
-        - kernel
-        - http_kernel
+  # these service IDs won't be processed by autowiring
+  ignored_services:
+    # either specify exact service IDs
+    - kernel
+    - http_kernel
 
-        # or use regular expressions (they must start with "/")
-        - /^debug\./
-        - /^file/
+    # or use regular expressions (they must start with "/")
+    - /^debug\./
+    - /^file/
 
-      # match interfaces to exact services
-      preferred_services:
-        Psr\Log\LoggerInterface: logger
-        Monolog\Logger: logger
-        Symfony\Component\HttpFoundation\Session\Storage\SessionStorageInterface: session.storage.native
+  # match interfaces to exact services
+  preferred_services:
+    Psr\Log\LoggerInterface: logger
+    Monolog\Logger: logger
+    Symfony\Component\HttpFoundation\Session\Storage\SessionStorageInterface: session.storage.native
 
-      # if you create your own stereotypes, you must add then here
-      fast_annotation_checks: [ @Task, @Widget ]
+  # if you create your own stereotypes, you must add then here
+  fast_annotation_checks: [ @Task, @Widget ]
 
-      # add directories to be scanned
-      autoscan_psr4:
-        Skrz\Controller: %kernel.root_dir%/src/Skrz/Controller
-        Skrz\Repository: %kernel.root_dir%/src/Skrz/Repository
-        Skrz\Service: %kernel.root_dir%/src/Skrz/Service
+  # add directories to be scanned
+  autoscan_psr4:
+    Skrz\Controller: %kernel.root_dir%/src/Skrz/Controller
+    Skrz\Repository: %kernel.root_dir%/src/Skrz/Repository
+    Skrz\Service: %kernel.root_dir%/src/Skrz/Service
+```
 
 ## Known limitations
 
@@ -259,4 +282,4 @@ is validated during container compilation.
 
 ## License
 
-The MIT license. See `LICENSE` file.
+The MIT license. See [LICENSE](LICENSE) file.
