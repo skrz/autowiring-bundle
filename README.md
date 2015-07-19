@@ -1,7 +1,8 @@
 # Skrz\Bundle\AutowiringBundle
 
-[![Downloads this Month](https://img.shields.io/packagist/dm/skrz/autowiring-bundle.svg)](https://packagist.org/packages/skrz/autowiring-bundle)
-[![Latest stable](https://img.shields.io/packagist/v/skrz/autowiring-bundle.svg)](https://packagist.org/packages/skrz/autowiring-bundle)
+[![Build Status](https://img.shields.io/travis/TomasVotruba/autowiring-bundle.svg?style=flat-square)](https://travis-ci.org/TomasVotruba/autowiring-bundle)
+[![Downloads this Month](https://img.shields.io/packagist/dm/skrz/autowiring-bundle.svg?style=flat-square)](https://packagist.org/packages/skrz/autowiring-bundle)
+[![Latest stable](https://img.shields.io/packagist/v/skrz/autowiring-bundle.svg?style=flat-square)](https://packagist.org/packages/skrz/autowiring-bundle)
 
 > Writing `services.yml` is boring, it should be automated. `Skrz\Bundle\AutowiringBundle` automates `services.yml` management.
 
