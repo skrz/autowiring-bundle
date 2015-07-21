@@ -2,6 +2,7 @@
 namespace Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler;
 
 use Doctrine\Common\Annotations\AnnotationReader;
+use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\PhpParser;
 use ReflectionClass;
 use ReflectionMethod;
@@ -42,6 +43,7 @@ class AutowiringCompilerPass implements CompilerPassInterface
 		$this->classMap = $classMap;
 		$this->annotationReader = $annotationReader;
 		$this->phpParser = $phpParser;
+		AnnotationRegistry::registerFile(__DIR__ . '/../../Annotation/Autowired.php');
 	}
 
 	public function process(ContainerBuilder $container)
@@ -251,7 +253,7 @@ class AutowiringCompilerPass implements CompilerPassInterface
 				if ($incorrectUsage) {
 					throw new AutowiringException(
                         sprintf(
-                            "Property can have either @Autowired, or @Value annotation, not both. (Property %s::\$%s)",
+                            "Property can have either @Autowired, or @Value annotation, not both. (Property %s::$%s)",
 						    $className,
                             $reflectionProperty->getName()
                         )
@@ -291,11 +293,15 @@ class AutowiringCompilerPass implements CompilerPassInterface
 
 				} catch (AutowiringException $exception) {
 					throw new AutowiringException(
-						$exception->getMessage() . " ({$className}::{$reflectionMethod->getName()}(" .
-						($reflectionProperty->getPosition() !== 0 ? "..., " : "") .
-						"\${$reflectionProperty->getName()}" .
-						($reflectionProperty->getPosition() < $reflectionMethod->getNumberOfParameters() - 1 ? ", ..." : "") .
-						")",
+						sprintf(
+							"%s (%s::%s(%s$%s%s))",
+							$exception->getMessage(),
+							$className,
+							$reflectionMethod->getName(),
+							$reflectionProperty->getPosition() !== 0 ? "..., " : "",
+							$reflectionProperty->getName(),
+							$reflectionProperty->getPosition() < $reflectionMethod->getNumberOfParameters() - 1 ? ", ..." : ""
+						),
 						$exception->getCode(), $exception
 					);
 				}
@@ -319,7 +325,7 @@ class AutowiringCompilerPass implements CompilerPassInterface
         ReflectionClass $reflectionClass,
         $docComment,
         $parameterName,
-        ReflectionClass $parameterReflectionClass,
+        ReflectionClass $parameterReflectionClass = null,
         $defaultValueAvailable,
         $defaultValue,
         $preferredServices
