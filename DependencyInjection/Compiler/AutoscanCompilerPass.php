@@ -1,8 +1,10 @@
 <?php
-namespace Skrz\Bundle\AutowiringBundle;
+namespace Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler;
 
 use Doctrine\Common\Annotations\AnnotationReader;
 use Skrz\Bundle\AutowiringBundle\Annotation\Component;
+use Skrz\Bundle\AutowiringBundle\DependencyInjection\ClassMultiMap;
+use Skrz\Bundle\AutowiringBundle\Exception\AutowiringException;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -29,7 +31,6 @@ class AutoscanCompilerPass implements CompilerPassInterface
 	public function process(ContainerBuilder $container)
 	{
 		$parameterBag = $container->getParameterBag();
-
 		try {
 			$autoscanPsr4 = (array)$parameterBag->resolveValue("%autowiring.autoscan_psr4%");
 		} catch (ParameterNotFoundException $e) {
@@ -55,7 +56,9 @@ class AutoscanCompilerPass implements CompilerPassInterface
 		$grep = "egrep -lir " . escapeshellarg($fastAnnotationChecksRegex);
 		foreach ($autoscanPsr4 as $ns => $dir) {
 			if (!is_dir($dir)) {
-				throw new AutowiringException("Autoscan directory '{$dir}' does not exits.");
+				throw new AutowiringException(
+					sprintf("Autoscan directory '%s' does not exits.", $dir)
+				);
 			}
 
 			$autoscanPsr4[$ns] = $dir = realpath($dir);
@@ -74,7 +77,9 @@ class AutoscanCompilerPass implements CompilerPassInterface
 
 			foreach ($autoscanPsr4 as $ns => $dir) {
 				if (strncmp($file, $dir, strlen($dir)) === 0) {
-					$classNames[$ns . str_replace("/", "\\", substr($file, strlen($dir), strlen($file) - strlen($dir) - 4))] = $file;
+					$fileWithoutDir = substr($file, strlen($dir), strlen($file) - strlen($dir) - 4);
+					$className = $ns . str_replace("/", "\\", $fileWithoutDir);
+					$classNames[$className] = $file;
 					break;
 				}
 			}
@@ -90,8 +95,12 @@ class AutoscanCompilerPass implements CompilerPassInterface
 				$rc = new \ReflectionClass($className);
 			} catch (\ReflectionException $e) {
 				throw new AutowiringException(
-					"File '{$file}' does not contain class '{$className}', or class is not autoload-able. " .
-					"Check 'autowiring.autoscan_psr4' configuration if you specified the path correctly."
+					sprintf(
+						"File '%s' does not contain class '%s', or class is not autoload-able. " .
+						"Check 'autowiring.autoscan_psr4' configuration if you specified the path correctly.",
+						$file,
+						$className
+					)
 				);
 			}
 
@@ -106,8 +115,9 @@ class AutoscanCompilerPass implements CompilerPassInterface
 						$annotationSimpleName = substr($annotationClassName, strrpos($annotationClassName, "\\") + 1);
 						$classNameParts = explode("\\", $className);
 						$classSimpleName = array_pop($classNameParts);
-						if (substr($classSimpleName, -strlen($annotationSimpleName)) === $annotationSimpleName) {
-							$classSimpleName = substr($classSimpleName, 0, strlen($classSimpleName) - strlen($annotationSimpleName));
+						$annotationLen = strlen($annotationSimpleName);
+						if (substr($classSimpleName, -$annotationLen) === $annotationSimpleName) {
+							$classSimpleName = substr($classSimpleName, 0, strlen($classSimpleName) - $annotationLen);
 						}
 
 						$middle = ".";
@@ -126,7 +136,11 @@ class AutoscanCompilerPass implements CompilerPassInterface
 
 					if ($container->hasDefinition($serviceId)) {
 						throw new AutowiringException(
-							"Class '{$className}' cannot be added as service '{$serviceId}', service ID already exists."
+							sprintf(
+								"Class '%s' cannot be added as service '%s', service ID already exists.",
+								$className,
+								$serviceId
+							)
 						);
 					}
 

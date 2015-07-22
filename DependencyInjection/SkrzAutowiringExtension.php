@@ -1,5 +1,5 @@
 <?php
-namespace Skrz\Bundle\AutowiringBundle;
+namespace Skrz\Bundle\AutowiringBundle\DependencyInjection;
 
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
@@ -9,9 +9,20 @@ use Symfony\Component\DependencyInjection\Extension\Extension;
 /**
  * @author Jakub Kulhan <jakub.kulhan@gmail.com>
  */
-class AutowiringExtension extends Extension implements ConfigurationInterface
+class SkrzAutowiringExtension extends Extension implements ConfigurationInterface
 {
 
+	/**
+	 * {@inheritDoc}
+	 */
+	public function getAlias()
+	{
+		return "autowiring";
+	}
+
+	/**
+	 * {@inheritdoc}
+	 */
 	public function getConfigTreeBuilder()
 	{
 		$treeBuilder = new TreeBuilder();
@@ -35,10 +46,12 @@ class AutowiringExtension extends Extension implements ConfigurationInterface
 		return $treeBuilder;
 	}
 
+	/**
+	 * {@inheritdoc}
+	 */
 	public function load(array $config, ContainerBuilder $container)
 	{
 		$autowiringConfig = $this->processConfiguration($this, $config);
-
 		$container->setParameter("autowiring.ignored_services", $autowiringConfig["ignored_services"]);
 		$container->setParameter("autowiring.preferred_services", $autowiringConfig["preferred_services"]);
 		$container->setParameter("autowiring.autoscan_psr4", $autowiringConfig["autoscan_psr4"]);

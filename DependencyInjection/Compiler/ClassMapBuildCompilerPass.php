@@ -1,8 +1,10 @@
 <?php
-namespace Skrz\Bundle\AutowiringBundle;
+namespace Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler;
 
+use Skrz\Bundle\AutowiringBundle\DependencyInjection\ClassMultiMap;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Definition;
 
 class ClassMapBuildCompilerPass implements CompilerPassInterface
 {
@@ -20,15 +22,32 @@ class ClassMapBuildCompilerPass implements CompilerPassInterface
 		$parameterBag = $container->getParameterBag();
 
 		foreach ($container->getDefinitions() as $serviceId => $definition) {
-			if ($definition->isAbstract() ||
-				!$definition->isPublic() ||
-				!$definition->getClass()
-			) {
+			if (!$this->canBeAdded($definition)) {
 				continue;
 			}
 
 			$this->classMap->put($parameterBag->resolveValue($definition->getClass()), $serviceId);
 		}
+	}
+
+	/**
+	 * @return bool
+	 */
+	private function canBeAdded(Definition $definition)
+	{
+		if ($definition->isAbstract()) {
+			return false;
+		}
+
+		if (!$definition->isPublic()) {
+			return false;
+		}
+
+		if (!$definition->getClass()) {
+			return false;
+		}
+
+		return true;
 	}
 
 }
