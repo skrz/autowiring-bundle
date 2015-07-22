@@ -1,12 +1,5 @@
 <?php
 
-/**
- * This file is part of the AutowiringBundle.
- *
- * For the full copyright and license information, please view
- * the LICENSE file that was distributed with this source code.
- */
-
 namespace Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler;
 
 use Doctrine\Common\Annotations\AnnotationReader;
@@ -64,7 +57,9 @@ class AutoscanCompilerPass implements CompilerPassInterface
 		$grep = "egrep -lir " . escapeshellarg($fastAnnotationChecksRegex);
 		foreach ($autoscanPsr4 as $ns => $dir) {
 			if (!is_dir($dir)) {
-				throw new AutowiringException("Autoscan directory '{$dir}' does not exits.");
+				throw new AutowiringException(
+					sprintf("Autoscan directory '%s' does not exits.", $dir)
+				);
 			}
 
 			$autoscanPsr4[$ns] = $dir = realpath($dir);
@@ -99,8 +94,12 @@ class AutoscanCompilerPass implements CompilerPassInterface
 				$rc = new \ReflectionClass($className);
 			} catch (\ReflectionException $e) {
 				throw new AutowiringException(
-					"File '{$file}' does not contain class '{$className}', or class is not autoload-able. " .
-					"Check 'autowiring.autoscan_psr4' configuration if you specified the path correctly."
+					sprintf(
+						"File '%s' does not contain class '%s', or class is not autoload-able. " .
+						"Check 'autowiring.autoscan_psr4' configuration if you specified the path correctly.",
+						$file,
+						$className
+					)
 				);
 			}
 
@@ -135,7 +134,11 @@ class AutoscanCompilerPass implements CompilerPassInterface
 
 					if ($container->hasDefinition($serviceId)) {
 						throw new AutowiringException(
-							"Class '{$className}' cannot be added as service '{$serviceId}', service ID already exists."
+							sprintf(
+								"Class '%s' cannot be added as service '%s', service ID already exists.",
+								$className,
+								$serviceId
+							)
 						);
 					}
 

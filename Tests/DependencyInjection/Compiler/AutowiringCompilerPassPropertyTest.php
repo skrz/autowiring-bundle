@@ -8,12 +8,8 @@ use PHPUnit_Framework_TestCase;
 use Skrz\Bundle\AutowiringBundle\DependencyInjection\ClassMultiMap;
 use Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler\AutowiringCompilerPass;
 use Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler\ClassMapBuildCompilerPass;
-use Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection\Compiler\AutowiringCompilerPassSource\AutowiredClass;
-use Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection\Compiler\AutowiringCompilerPassSource\AutowiredPropertyClass;
-use Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection\Compiler\AutowiringCompilerPassSource\SomeClass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
-use Symfony\Component\DependencyInjection\Reference;
 
 class AutowiringCompilerPassPropertyTest extends PHPUnit_Framework_TestCase
 {
@@ -37,8 +33,12 @@ class AutowiringCompilerPassPropertyTest extends PHPUnit_Framework_TestCase
     public function testAutowireConstructor()
     {
         $containerBuilder = new ContainerBuilder;
-        $autowiredServiceDefinition = $containerBuilder->setDefinition('autowiredService', new Definition(AutowiredPropertyClass::class));
-        $containerBuilder->setDefinition('someService', new Definition(SomeClass::class));
+        $autowiredServiceDefinition = $containerBuilder->setDefinition("autowiredService", new Definition(
+            "Skrz\\Bundle\\AutowiringBundle\\Tests\\DependencyInjection\\Compiler\\AutowiringCompilerPassSource\\AutowiredPropertyClass"
+        ));
+        $containerBuilder->setDefinition("someService", new Definition(
+            "Skrz\\Bundle\\AutowiringBundle\\Tests\\DependencyInjection\\Compiler\\AutowiringCompilerPassSource\\SomeClass"
+        ));
 
         $this->assertSame([], $autowiredServiceDefinition->getProperties());
 
@@ -46,8 +46,8 @@ class AutowiringCompilerPassPropertyTest extends PHPUnit_Framework_TestCase
         $this->autowiringCompilerPass->process($containerBuilder);
 
         $reference = $autowiredServiceDefinition->getProperties()['property'];
-        $this->assertInstanceOf(Reference::class, $reference);
-        $this->assertSame('someservice', (string) $reference);
+        $this->assertInstanceOf("Symfony\\Component\\DependencyInjection\\Reference", $reference);
+        $this->assertSame("someservice", (string) $reference);
     }
 
 }

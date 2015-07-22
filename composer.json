@@ -9,7 +9,7 @@
         }
     ],
     "require": {
-        "php": ">=5.5",
+        "php": ">=5.4",
         "doctrine/annotations": "~1.2",
         "symfony/config": "~2.7",
         "symfony/dependency-injection": "~2.7",

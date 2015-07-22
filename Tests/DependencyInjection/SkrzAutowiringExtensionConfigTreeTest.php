@@ -5,11 +5,11 @@ namespace Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection;
 use PHPUnit_Framework_TestCase;
 use Skrz\Bundle\AutowiringBundle\DependencyInjection\SkrzAutowiringExtension;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
-use Symfony\Component\Config\Definition\Exception\InvalidTypeException;
 use Symfony\Component\Config\Definition\Processor;
 
 class SkrzAutowiringExtensionConfigTreeTest extends PHPUnit_Framework_TestCase
 {
+
     /** @var SkrzAutowiringExtension */
     private $autowiringExtension;
 
@@ -28,7 +28,7 @@ class SkrzAutowiringExtensionConfigTreeTest extends PHPUnit_Framework_TestCase
 
     public function testConfigWithNoArray()
     {
-        $this->setExpectedException(InvalidTypeException::class);
+        $this->setExpectedException('Symfony\Component\Config\Definition\Exception\InvalidTypeException');
         $this->processor->process($this->configTreeBuilder->buildTree(), ['autowiring']);
     }
 
@@ -39,7 +39,7 @@ class SkrzAutowiringExtensionConfigTreeTest extends PHPUnit_Framework_TestCase
 
     public function testIgnoredServicesWithNoArray()
     {
-        $this->setExpectedException(InvalidTypeException::class);
+        $this->setExpectedException('Symfony\Component\Config\Definition\Exception\InvalidTypeException');
         $this->processor->process($this->configTreeBuilder->buildTree(), ['autowiring' => [
             'ignored_services' => ''
         ]]);
@@ -47,7 +47,7 @@ class SkrzAutowiringExtensionConfigTreeTest extends PHPUnit_Framework_TestCase
 
     public function testPreferredServicesWithNoArray()
     {
-        $this->setExpectedException(InvalidTypeException::class);
+        $this->setExpectedException('Symfony\Component\Config\Definition\Exception\InvalidTypeException');
         $this->processor->process($this->configTreeBuilder->buildTree(), ['autowiring' => [
             'preferred_services' => ''
         ]]);
@@ -62,7 +62,7 @@ class SkrzAutowiringExtensionConfigTreeTest extends PHPUnit_Framework_TestCase
 
     public function testFastAnnotationChecksWithNoArray()
     {
-        $this->setExpectedException(InvalidTypeException::class);
+        $this->setExpectedException('Symfony\Component\Config\Definition\Exception\InvalidTypeException');
         $this->processor->process($this->configTreeBuilder->buildTree(), ['autowiring' => [
             'fast_annotation_checks' => ''
         ]]);
@@ -77,7 +77,7 @@ class SkrzAutowiringExtensionConfigTreeTest extends PHPUnit_Framework_TestCase
 
     public function testFastAnnotationChecksEnabledIncorrectType()
     {
-        $this->setExpectedException(InvalidTypeException::class);
+        $this->setExpectedException('Symfony\Component\Config\Definition\Exception\InvalidTypeException');
         $this->processor->process($this->configTreeBuilder->buildTree(), ['autowiring' => [
             'fast_annotation_checks_enabled' => ''
         ]]);
@@ -92,7 +92,7 @@ class SkrzAutowiringExtensionConfigTreeTest extends PHPUnit_Framework_TestCase
 
     public function testAutoscanPsr4IncorrectType()
     {
-        $this->setExpectedException(InvalidTypeException::class);
+        $this->setExpectedException('Symfony\Component\Config\Definition\Exception\InvalidTypeException');
         $this->processor->process($this->configTreeBuilder->buildTree(), ['autowiring' => [
             'autoscan_psr4' => ''
         ]]);

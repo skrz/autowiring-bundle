@@ -1,12 +1,5 @@
 <?php
 
-/**
- * This file is part of the AutowiringBundle.
- *
- * For the full copyright and license information, please view
- * the LICENSE file that was distributed with this source code.
- */
-
 namespace Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler;
 
 use Skrz\Bundle\AutowiringBundle\DependencyInjection\ClassMultiMap;
@@ -30,7 +23,7 @@ class ClassMapBuildCompilerPass implements CompilerPassInterface
 		$parameterBag = $container->getParameterBag();
 
 		foreach ($container->getDefinitions() as $serviceId => $definition) {
-			if ($this->canBeAdded($definition) === FALSE) {
+			if (!$this->canBeAdded($definition)) {
 				continue;
 			}
 
@@ -44,18 +37,18 @@ class ClassMapBuildCompilerPass implements CompilerPassInterface
 	private function canBeAdded(Definition $definition)
 	{
 		if ($definition->isAbstract()) {
-			return FALSE;
+			return false;
 		}
 
 		if (!$definition->isPublic()) {
-			return FALSE;
+			return false;
 		}
 
 		if (!$definition->getClass()) {
-			return FALSE;
+			return false;
 		}
 
-		return TRUE;
+		return true;
 	}
 
 }

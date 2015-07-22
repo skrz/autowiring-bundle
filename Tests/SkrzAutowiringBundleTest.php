@@ -23,7 +23,7 @@ class SkrzAutowiringBundleTest extends PHPUnit_Framework_TestCase
     public function testGetContainerExtension()
     {
         $this->assertInstanceOf(
-            SkrzAutowiringExtension::class,
+            "Skrz\\Bundle\\AutowiringBundle\\DependencyInjection\\SkrzAutowiringExtension",
             $this->skrzAutowiringBundle->getContainerExtension()
         );
     }
@@ -35,12 +35,12 @@ class SkrzAutowiringBundleTest extends PHPUnit_Framework_TestCase
         $passConfig = $containerBuilder->getCompiler()->getPassConfig();
 
         $beforeOptimizationPasses = $passConfig->getBeforeOptimizationPasses();
-        $this->assertInstanceOf(ClassMapBuildCompilerPass::class, $beforeOptimizationPasses[0]);
-        $this->assertInstanceOf(AutoscanCompilerPass::class, $beforeOptimizationPasses[1]);
+        $this->assertInstanceOf("Skrz\\Bundle\\AutowiringBundle\\DependencyInjection\\Compiler\\ClassMapBuildCompilerPass", $beforeOptimizationPasses[0]);
+        $this->assertInstanceOf("Skrz\\Bundle\\AutowiringBundle\\DependencyInjection\\Compiler\\AutoscanCompilerPass", $beforeOptimizationPasses[1]);
 
         $afterRemovingPasses = $passConfig->getAfterRemovingPasses();
-        $this->assertInstanceOf(ClassMapBuildCompilerPass::class, $afterRemovingPasses[0]);
-        $this->assertInstanceOf(AutowiringCompilerPass::class, $afterRemovingPasses[1]);
+        $this->assertInstanceOf("Skrz\\Bundle\\AutowiringBundle\\DependencyInjection\\Compiler\\ClassMapBuildCompilerPass", $afterRemovingPasses[0]);
+        $this->assertInstanceOf("Skrz\\Bundle\\AutowiringBundle\\DependencyInjection\\Compiler\\AutowiringCompilerPass", $afterRemovingPasses[1]);
     }
 
 }

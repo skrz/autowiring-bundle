@@ -6,13 +6,14 @@ use PHPUnit_Framework_Assert;
 use PHPUnit_Framework_TestCase;
 use Skrz\Bundle\AutowiringBundle\DependencyInjection\ClassMultiMap;
 use Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler\ClassMapBuildCompilerPass;
-use Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection\ClassMultipleMapSource\SomeClass;
-use Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection\ClassMultipleMapSource\SomeInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 
 class ClassMapBuildCompilerPassTest extends PHPUnit_Framework_TestCase
 {
+
+    /** @var string */
+    const SOME_CLASS_NAME = "Skrz\\Bundle\\AutowiringBundle\\Tests\\DependencyInjection\\ClassMultipleMapSource\\SomeClass";
 
     /** @var ClassMultiMap */
     private $classMultiMap;
@@ -37,19 +38,19 @@ class ClassMapBuildCompilerPassTest extends PHPUnit_Framework_TestCase
     public function testProcess()
     {
         $containerBuilder = new ContainerBuilder;
-        $containerBuilder->setDefinition('someService', new Definition(SomeClass::class));
+        $containerBuilder->setDefinition('someService', new Definition(self::SOME_CLASS_NAME));
         $this->classMapBuildCompilerPass->process($containerBuilder);
 
         $this->assertSame([
-            SomeInterface::class => ['someservice'],
-            SomeClass::class => ['someservice']
+            "Skrz\\Bundle\\AutowiringBundle\\Tests\\DependencyInjection\\ClassMultipleMapSource\\SomeInterface" => ['someservice'],
+            self::SOME_CLASS_NAME => ['someservice']
         ], $this->getClassMapBuildClasses());
     }
 
     public function testSkipPrivate()
     {
         $containerBuilder = new ContainerBuilder;
-        $containerBuilder->setDefinition('someService', new Definition(SomeClass::class))
+        $containerBuilder->setDefinition('someService', new Definition(self::SOME_CLASS_NAME))
             ->setPublic(FALSE);
         $this->classMapBuildCompilerPass->process($containerBuilder);
 
@@ -68,7 +69,7 @@ class ClassMapBuildCompilerPassTest extends PHPUnit_Framework_TestCase
     public function testSkipAbstract()
     {
         $containerBuilder = new ContainerBuilder;
-        $containerBuilder->setDefinition('someService', new Definition(SomeClass::class))
+        $containerBuilder->setDefinition('someService', new Definition(self::SOME_CLASS_NAME))
             ->setAbstract(TRUE);
         $this->classMapBuildCompilerPass->process($containerBuilder);
 
