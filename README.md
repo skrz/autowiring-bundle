@@ -95,6 +95,52 @@ class HomepageController
 Note that constructor is **ALWAYS** autowired if there is not enough `arguments` specified in `services.yml`. If you really
 do not want the constructor to be autowired, add the service to `ignored_services` configuration directive.
 
+Note: if you need to specify some of the constructor arguments and autowire other constructor aurguments, you need
+to configure your service the following way:
+
+```yaml
+// services.yml
+services:
+  controller.homepage:
+    class: HomepageController
+    arguments: 
+        someParameter: %kernel.whatever%
+```
+
+```php
+// HomepageController.php
+
+use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
+
+/**
+ * @Controller
+ */
+class HomepageController
+{
+
+    /**
+     * @var SomeService
+     */
+    private $someService;
+    
+    /**
+     * @var string
+     */
+    private $someParameter;
+
+    public function __construct(SomeService $someService, $someParameter)
+    {
+        $this->someService = $someService;
+        $this->someParameter = $someParameter;
+    }
+
+    ...
+
+}
+```
+
+The $someService argument is autowired and the $someParameter argument is injected depending on the configuration.
+
 ### Method dependency injection
 
 ```yaml

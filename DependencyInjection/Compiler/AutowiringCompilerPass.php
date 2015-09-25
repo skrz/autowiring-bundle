@@ -169,7 +169,7 @@ class AutowiringCompilerPass implements CompilerPassInterface
 					$this->autowireMethod(
 						$className,
 						$reflectionMethod,
-						$definition->getArguments(),
+						[],
 						$preferredServices
 					)
 				);
@@ -296,7 +296,8 @@ class AutowiringCompilerPass implements CompilerPassInterface
 			// intentionally array_key_exists() instead of isset(), isset() would return false if argument is null
 			if (array_key_exists($i, $arguments)) {
 				$outputArguments[$i] = $arguments[$i];
-
+			} else if (array_key_exists($reflectionProperty->getName(), $arguments)) {
+				$outputArguments[$i] = $arguments[$reflectionProperty->getName()];
 			} else {
 				try {
 					$outputArguments[$i] = $this->getValue(
@@ -483,5 +484,4 @@ class AutowiringCompilerPass implements CompilerPassInterface
 
 		return true;
 	}
-
 }
