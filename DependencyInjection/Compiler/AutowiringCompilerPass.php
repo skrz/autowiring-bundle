@@ -473,10 +473,7 @@ class AutowiringCompilerPass implements CompilerPassInterface
 			$definition->isSynthetic() ||
 			!$definition->isPublic() ||
 			!$definition->getClass() ||
-			$definition->getFactory() ||
-			$definition->getFactoryClass(false) ||
-			$definition->getFactoryService(false) ||
-			$definition->getFactoryMethod(false)
+			$definition->getFactory()
 		) {
 			return false;
 		}
