@@ -86,13 +86,8 @@ class AutoscanCompilerPass implements CompilerPassInterface
 		}
 
 		foreach ($classNames as $className => $file) {
-			$serviceIds = $this->classMap->getMulti($className);
-			if (!empty($serviceIds)) {
-				continue;
-			}
-
 			try {
-				$rc = new \ReflectionClass($className);
+				new \ReflectionClass($className);
 			} catch (\ReflectionException $e) {
 				throw new AutowiringException(
 					sprintf(
@@ -102,6 +97,21 @@ class AutoscanCompilerPass implements CompilerPassInterface
 						$className
 					)
 				);
+			}
+		}
+
+		$classFiles = array_flip($classNames);
+
+		foreach (get_declared_classes() as $className) {
+			$serviceIds = $this->classMap->getMulti($className);
+			if (!empty($serviceIds)) {
+				continue;
+			}
+
+			$rc = new \ReflectionClass($className);
+
+			if (!isset($classFiles[$rc->getFileName()])) {
+				continue;
 			}
 
 			$annotations = $this->annotationReader->getClassAnnotations($rc);
@@ -144,7 +154,13 @@ class AutoscanCompilerPass implements CompilerPassInterface
 						);
 					}
 
-					$container->setDefinition($serviceId, new Definition($className));
+					$definition = new Definition($className);
+
+					if ($classFiles[$rc->getFileName()] !== $className) {
+						$definition->setFile($rc->getFileName());
+					}
+
+					$container->setDefinition($serviceId, $definition);
 				}
 			}
 		}
