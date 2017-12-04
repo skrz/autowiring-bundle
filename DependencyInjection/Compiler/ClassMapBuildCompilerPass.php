@@ -39,10 +39,6 @@ class ClassMapBuildCompilerPass implements CompilerPassInterface
 			return false;
 		}
 
-		if (!$definition->isPublic()) {
-			return false;
-		}
-
 		if (!$definition->getClass()) {
 			return false;
 		}
