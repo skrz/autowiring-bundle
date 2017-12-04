@@ -9,6 +9,7 @@ use Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler\AutowiringCompiler
 use Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler\ClassMapBuildCompilerPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
+use Symfony\Component\HttpKernel\Kernel;
 
 class AutowiringCompilerPassPropertyTest extends PHPUnit_Framework_TestCase
 {
@@ -46,7 +47,11 @@ class AutowiringCompilerPassPropertyTest extends PHPUnit_Framework_TestCase
 
 		$reference = $autowiredServiceDefinition->getProperties()["property"];
 		$this->assertInstanceOf("Symfony\\Component\\DependencyInjection\\Reference", $reference);
-		$this->assertSame("someservice", (string) $reference);
+		if (Kernel::VERSION_ID >= 30300) {
+			$this->assertSame("someService", (string)$reference);
+		} else {
+			$this->assertSame("someservice", (string)$reference);
+		}
 	}
 
 }

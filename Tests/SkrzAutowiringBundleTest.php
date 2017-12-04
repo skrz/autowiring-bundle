@@ -4,6 +4,7 @@ namespace Skrz\Bundle\AutowiringBundle\Tests;
 use PHPUnit_Framework_TestCase;
 use Skrz\Bundle\AutowiringBundle\SkrzAutowiringBundle;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\HttpKernel\Kernel;
 
 class SkrzAutowiringBundleTest extends PHPUnit_Framework_TestCase
 {
@@ -31,8 +32,12 @@ class SkrzAutowiringBundleTest extends PHPUnit_Framework_TestCase
 		$passConfig = $containerBuilder->getCompiler()->getPassConfig();
 
 		$beforeOptimizationPasses = $passConfig->getBeforeOptimizationPasses();
-		$this->assertInstanceOf("Skrz\\Bundle\\AutowiringBundle\\DependencyInjection\\Compiler\\ClassMapBuildCompilerPass", $beforeOptimizationPasses[0]);
-		$this->assertInstanceOf("Skrz\\Bundle\\AutowiringBundle\\DependencyInjection\\Compiler\\AutoscanCompilerPass", $beforeOptimizationPasses[1]);
+		$baseIndex = 0;
+		if (Kernel::VERSION_ID >= 30300) {
+		   $baseIndex = 3;
+		}
+		$this->assertInstanceOf("Skrz\\Bundle\\AutowiringBundle\\DependencyInjection\\Compiler\\ClassMapBuildCompilerPass", $beforeOptimizationPasses[0 + $baseIndex]);
+		$this->assertInstanceOf("Skrz\\Bundle\\AutowiringBundle\\DependencyInjection\\Compiler\\AutoscanCompilerPass", $beforeOptimizationPasses[1 + $baseIndex]);
 
 		$afterRemovingPasses = $passConfig->getAfterRemovingPasses();
 		$this->assertInstanceOf("Skrz\\Bundle\\AutowiringBundle\\DependencyInjection\\Compiler\\ClassMapBuildCompilerPass", $afterRemovingPasses[0]);
