@@ -43,6 +43,10 @@ class ClassMapBuildCompilerPass implements CompilerPassInterface
 			return false;
 		}
 
+		if (!class_exists($definition->getClass())) {
+			return false;
+		}
+
 		return true;
 	}
 
