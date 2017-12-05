@@ -86,7 +86,11 @@ class AutowiringCompilerPass implements CompilerPassInterface
 				);
 
 				// add files to cache
-				$container->addClassResource($reflectionClass);
+				if (method_exists($container, 'addObjectResource')) {
+					$container->addObjectResource($reflectionClass);
+				} elseif (method_exists($container, 'addClassResource')) {
+					$container->addClassResource($reflectionClass);
+				}
 
 			} catch (AutowiringException $exception) {
 				throw new AutowiringException(

@@ -10,6 +10,7 @@ use Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler\ClassMapBuildCompi
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\HttpKernel\Kernel;
 
 class AutowiringCompilerPassTest extends PHPUnit_Framework_TestCase
 {
@@ -61,7 +62,11 @@ class AutowiringCompilerPassTest extends PHPUnit_Framework_TestCase
 		/** @var Reference $reference */
 		$reference = $arguments[0];
 		$this->assertInstanceOf("Symfony\\Component\\DependencyInjection\\Reference", $reference);
-		$this->assertSame("someservice", (string) $reference);
+		if (Kernel::VERSION_ID >= 30300) {
+			$this->assertSame("someService", (string)$reference);
+		} else {
+			$this->assertSame("someservice", (string)$reference);
+		}
 	}
 
 	public function testAutowireConstructorWithInterface()
@@ -85,7 +90,11 @@ class AutowiringCompilerPassTest extends PHPUnit_Framework_TestCase
 		/** @var Reference $reference */
 		$reference = $arguments[0];
 		$this->assertInstanceOf("Symfony\\Component\\DependencyInjection\\Reference", $reference);
-		$this->assertSame("someservice", (string) $reference);
+		if (Kernel::VERSION_ID >= 30300) {
+			$this->assertSame("someService", (string)$reference);
+		} else {
+			$this->assertSame("someservice", (string)$reference);
+		}
 	}
 
 	public function testAutowireConstructorWithInterfaceOptionally()
@@ -128,10 +137,18 @@ class AutowiringCompilerPassTest extends PHPUnit_Framework_TestCase
 		/** @var Reference $reference */
 		$reference = $arguments[0];
 		$this->assertInstanceOf("Symfony\\Component\\DependencyInjection\\Reference", $reference);
-		$this->assertSame("someservice", (string) $reference);
+		if (Kernel::VERSION_ID >= 30300) {
+			$this->assertSame("someService", (string)$reference);
+		} else {
+			$this->assertSame("someservice", (string)$reference);
+		}
 
 		$reference = $arguments[1];
 		$this->assertInstanceOf("Symfony\\Component\\DependencyInjection\\Reference", $reference);
-		$this->assertSame("someservice2", (string) $reference);
+		if (Kernel::VERSION_ID >= 30300) {
+			$this->assertSame("someService2", (string)$reference);
+		} else {
+			$this->assertSame("someservice2", (string)$reference);
+		}
 	}
 }
