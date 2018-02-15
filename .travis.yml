@@ -1,11 +1,9 @@
 language: php
 
 php:
-  - 5.5
-  - 5.6
-  - 7.0
   - 7.1
   - 7.2
+  - nightly
 
 cache:
   directories:
@@ -16,14 +14,19 @@ env:
     - PREFER_LOWEST="--prefer-lowest"
     - PREFER_LOWEST=""
 
+matrix:
+  allow_failures:
+    - php: nightly
+
+
 install:
   - composer update $PREFER_LOWEST
 
 before_script:
-  - if [ $TRAVIS_PHP_VERSION = '5.6' ]; then PHPUNIT_FLAGS="--coverage-clover coverage.xml"; fi
+  - if [ $TRAVIS_PHP_VERSION = '7.2' ]; then PHPUNIT_FLAGS="--coverage-clover coverage.xml"; fi
 
 script:
   - phpunit $PHPUNIT_FLAGS
 
 after_script:
-  - if [ $TRAVIS_PHP_VERSION = '5.6' ]; then wget https://scrutinizer-ci.com/ocular.phar && php ocular.phar code-coverage:upload --format=php-clover coverage.xml; fi
+  - if [ $TRAVIS_PHP_VERSION = '7.2' ]; then wget https://scrutinizer-ci.com/ocular.phar && php ocular.phar code-coverage:upload --format=php-clover coverage.xml; fi

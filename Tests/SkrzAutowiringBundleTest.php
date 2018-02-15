@@ -1,47 +1,49 @@
 <?php
 namespace Skrz\Bundle\AutowiringBundle\Tests;
 
-use PHPUnit_Framework_TestCase;
+use PHPUnit\Framework\TestCase;
+use Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler\AutowiringCompilerPass;
+use Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler\ClassMapBuildCompilerPass;
+use Skrz\Bundle\AutowiringBundle\DependencyInjection\SkrzAutowiringExtension;
 use Skrz\Bundle\AutowiringBundle\SkrzAutowiringBundle;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\HttpKernel\Kernel;
 
-class SkrzAutowiringBundleTest extends PHPUnit_Framework_TestCase
+class SkrzAutowiringBundleTest extends TestCase
 {
 
 	/** @var SkrzAutowiringBundle */
-	private $skrzAutowiringBundle;
+	private $bundle;
 
 	protected function setUp()
 	{
-		$this->skrzAutowiringBundle = new SkrzAutowiringBundle;
+		$this->bundle = new SkrzAutowiringBundle();
 	}
 
 	public function testGetContainerExtension()
 	{
-		$this->assertInstanceOf(
-			"Skrz\\Bundle\\AutowiringBundle\\DependencyInjection\\SkrzAutowiringExtension",
-			$this->skrzAutowiringBundle->getContainerExtension()
-		);
+		$this->assertInstanceOf(SkrzAutowiringExtension::class, $this->bundle->getContainerExtension());
 	}
 
 	public function testBuild()
 	{
-		$containerBuilder = new ContainerBuilder;
-		$this->skrzAutowiringBundle->build($containerBuilder);
+		$containerBuilder = new ContainerBuilder();
+		$this->bundle->build($containerBuilder);
 		$passConfig = $containerBuilder->getCompiler()->getPassConfig();
 
-		$beforeOptimizationPasses = $passConfig->getBeforeOptimizationPasses();
-		$baseIndex = 0;
-		if (Kernel::VERSION_ID >= 30300) {
-		   $baseIndex = 3;
-		}
-		$this->assertInstanceOf("Skrz\\Bundle\\AutowiringBundle\\DependencyInjection\\Compiler\\ClassMapBuildCompilerPass", $beforeOptimizationPasses[0 + $baseIndex]);
-		$this->assertInstanceOf("Skrz\\Bundle\\AutowiringBundle\\DependencyInjection\\Compiler\\AutoscanCompilerPass", $beforeOptimizationPasses[1 + $baseIndex]);
+		$passes = $passConfig->getOptimizationPasses();
 
-		$afterRemovingPasses = $passConfig->getAfterRemovingPasses();
-		$this->assertInstanceOf("Skrz\\Bundle\\AutowiringBundle\\DependencyInjection\\Compiler\\ClassMapBuildCompilerPass", $afterRemovingPasses[0]);
-		$this->assertInstanceOf("Skrz\\Bundle\\AutowiringBundle\\DependencyInjection\\Compiler\\AutowiringCompilerPass", $afterRemovingPasses[1]);
+		$classMapBuilderFound = 0;
+		$autowiringCompilerPassFound = 0;
+		foreach ($passes as $pass) {
+			if ($pass instanceof AutowiringCompilerPass) {
+				++$autowiringCompilerPassFound;
+			} else if ($pass instanceof ClassMapBuildCompilerPass) {
+				++$classMapBuilderFound;
+			}
+		}
+
+		$this->assertEquals(1, $classMapBuilderFound, sprintf("Compiler pass [%s] should be registered.", ClassMapBuildCompilerPass::class));
+		$this->assertEquals(1, $autowiringCompilerPassFound, sprintf("Compiler pass [%s] should be registered.", AutowiringCompilerPass::class));
 	}
 
 }
