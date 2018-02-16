@@ -74,7 +74,7 @@ class ClassMultiMap
 	 * @param string $className
 	 * @return string[]
 	 */
-	public function getMulti($className): array
+	public function getMulti(string $className): array
 	{
 		if (!isset($this->classes[$className])) {
 			return [];

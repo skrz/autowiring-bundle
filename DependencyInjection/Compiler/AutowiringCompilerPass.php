@@ -110,11 +110,11 @@ class AutowiringCompilerPass implements CompilerPassInterface
 	 * @param ParameterBagInterface $parameterBag
 	 */
 	private function autowireClass(
-		$className,
+		string $className,
 		ReflectionClass $reflectionClass,
 		Definition $definition,
-		$fastAnnotationChecksRegex,
-		$preferredServices,
+		?string $fastAnnotationChecksRegex,
+		array $preferredServices,
 		ParameterBagInterface $parameterBag
 	) {
 		// constructor - autowire always
@@ -288,11 +288,11 @@ class AutowiringCompilerPass implements CompilerPassInterface
 	 * @return array
 	 */
 	private function autowireMethod(
-		$className,
+		string $className,
 		ReflectionMethod $reflectionMethod,
 		array $arguments,
-		$preferredServices
-	) {
+		array $preferredServices
+	): array {
 		$outputArguments = [];
 
 		foreach ($reflectionMethod->getParameters() as $i => $reflectionProperty) {
@@ -438,7 +438,7 @@ class AutowiringCompilerPass implements CompilerPassInterface
 	 * @param ReflectionClass $reflectionClass
 	 * @return string[]
 	 */
-	public function getUseStatements(ReflectionClass $reflectionClass)
+	public function getUseStatements(ReflectionClass $reflectionClass): array
 	{
 		if (!isset($this->cachedUseStatements[$reflectionClass->getName()])) {
 			$this->cachedUseStatements[$reflectionClass->getName()] = $this->phpParser->parseClass($reflectionClass);
@@ -450,7 +450,7 @@ class AutowiringCompilerPass implements CompilerPassInterface
 	/**
 	 * @return array
 	 */
-	private function getIgnoredServicePatterns()
+	private function getIgnoredServicePatterns(): array
 	{
 		try {
 			return (array)$this->parameterBag->resolveValue("%autowiring.ignored_services%");
@@ -462,9 +462,9 @@ class AutowiringCompilerPass implements CompilerPassInterface
 	/**
 	 * @param string $serviceId
 	 * @param Definition $definition
-	 * @return boolean
+	 * @return bool
 	 */
-	private function canDefinitionBeAutowired($serviceId, Definition $definition)
+	private function canDefinitionBeAutowired($serviceId, Definition $definition): bool
 	{
 		if (preg_match('/^\d+_[^~]++~[._a-zA-Z\d]{7}$/', $serviceId)) {
 			return false;
