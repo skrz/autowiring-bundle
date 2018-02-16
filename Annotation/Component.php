@@ -8,11 +8,4 @@ namespace Skrz\Bundle\AutowiringBundle\Annotation;
  */
 class Component
 {
-
-	/** @var string service ID */
-	public $name;
-
-	/** @var string service environments */
-	public $env;
-
 }

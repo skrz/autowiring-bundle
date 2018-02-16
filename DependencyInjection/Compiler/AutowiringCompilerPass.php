@@ -148,10 +148,7 @@ class AutowiringCompilerPass implements CompilerPassInterface
 				}
 
 				/** @var Autowired $annotation */
-				$annotation = $this->annotationReader->getMethodAnnotation(
-					$reflectionMethod,
-					"Skrz\\Bundle\\AutowiringBundle\\Annotation\\Autowired"
-				);
+				$annotation = $this->annotationReader->getMethodAnnotation($reflectionMethod, Autowired::class);
 
 				if ($annotation === null) {
 					continue;
