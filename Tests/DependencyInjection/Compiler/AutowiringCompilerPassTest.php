@@ -3,152 +3,130 @@ namespace Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection\Compiler;
 
 use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\Common\Annotations\PhpParser;
-use PHPUnit_Framework_TestCase;
+use PHPUnit\Framework\TestCase;
 use Skrz\Bundle\AutowiringBundle\DependencyInjection\ClassMultiMap;
 use Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler\AutowiringCompilerPass;
 use Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler\ClassMapBuildCompilerPass;
+use Skrz\Bundle\AutowiringBundle\Exception\AutowiringException;
+use Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection\Compiler\AutowiringCompilerPassSource\AutowiredClass;
+use Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection\Compiler\AutowiringCompilerPassSource\InterfaceAutowiredClass;
+use Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection\Compiler\AutowiringCompilerPassSource\OptionalAutowiredClass;
+use Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection\Compiler\AutowiringCompilerPassSource\SomeClass;
+use Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection\Compiler\AutowiringCompilerPassSource\SomeClass2;
+use Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection\Compiler\AutowiringCompilerPassSource\SomeInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
-use Symfony\Component\HttpKernel\Kernel;
 
-class AutowiringCompilerPassTest extends PHPUnit_Framework_TestCase
+class AutowiringCompilerPassTest extends TestCase
 {
-
-	/** @var string */
-	const AUTOWIRED_CLASS_NAME = "Skrz\\Bundle\\AutowiringBundle\\Tests\\DependencyInjection\\Compiler\\AutowiringCompilerPassSource\\AutowiredClass";
-
-	/** @var ClassMapBuildCompilerPass */
-	private $classMapBuildCompilerPass;
-
-	/** @var AutowiringCompilerPass */
-	private $autowiringCompilerPass;
-
-	protected function setUp()
-	{
-		$classMultiMap = new ClassMultiMap;
-		$annotationReader = new AnnotationReader;
-		$phpParser = new PhpParser;
-		// todo: hidden dependency, is logically required by AutowiringCompilerPass
-		$this->classMapBuildCompilerPass = new ClassMapBuildCompilerPass($classMultiMap);
-		$this->autowiringCompilerPass = new AutowiringCompilerPass($classMultiMap, $annotationReader, $phpParser);
-	}
 
 	public function testAutowireConstructorWithMissingClass()
 	{
-		$containerBuilder = new ContainerBuilder;
-		$containerBuilder->setDefinition("autowiredService", new Definition(self::AUTOWIRED_CLASS_NAME));
-		$this->setExpectedException("Skrz\\Bundle\\AutowiringBundle\\Exception\\AutowiringException");
-		$this->classMapBuildCompilerPass->process($containerBuilder);
-		$this->autowiringCompilerPass->process($containerBuilder);
+		$this->expectException(AutowiringException::class);
+
+		$containerBuilder = new ContainerBuilder();
+		$classMultiMap = new ClassMultiMap($containerBuilder);
+		$classMapBuildCompilerPass = new ClassMapBuildCompilerPass($classMultiMap);
+		$autowiringCompilerPass = new AutowiringCompilerPass($classMultiMap, new AnnotationReader(), new PhpParser());
+		$containerBuilder->setDefinition("autowiredService", new Definition(AutowiredClass::class));
+		$classMapBuildCompilerPass->process($containerBuilder);
+		$autowiringCompilerPass->process($containerBuilder);
 	}
 
 	public function testAutowireConstructor()
 	{
-		$containerBuilder = new ContainerBuilder;
-		$autowiredServiceDefinition = $containerBuilder->setDefinition("autowiredService", new Definition(self::AUTOWIRED_CLASS_NAME));
-		$containerBuilder->setDefinition("someService", new Definition(
-			"Skrz\\Bundle\\AutowiringBundle\\Tests\\DependencyInjection\\Compiler\\AutowiringCompilerPassSource\\SomeClass"
-		));
+		$containerBuilder = new ContainerBuilder();
+		$classMultiMap = new ClassMultiMap($containerBuilder);
+		$classMapBuildCompilerPass = new ClassMapBuildCompilerPass($classMultiMap);
+		$autowiringCompilerPass = new AutowiringCompilerPass($classMultiMap, new AnnotationReader(), new PhpParser());
+
+		$autowiredServiceDefinition = $containerBuilder->setDefinition("autowiredService", new Definition(AutowiredClass::class));
+		$containerBuilder->setDefinition("someService", new Definition(SomeClass::class));
 
 		$this->assertSame([], $autowiredServiceDefinition->getArguments());
 
-		$this->classMapBuildCompilerPass->process($containerBuilder);
-		$this->autowiringCompilerPass->process($containerBuilder);
+		$classMapBuildCompilerPass->process($containerBuilder);
+		$autowiringCompilerPass->process($containerBuilder);
 
 		$arguments = $autowiredServiceDefinition->getArguments();
 		$this->assertNotSame([], $arguments);
 
 		/** @var Reference $reference */
 		$reference = $arguments[0];
-		$this->assertInstanceOf("Symfony\\Component\\DependencyInjection\\Reference", $reference);
-		if (Kernel::VERSION_ID >= 30300) {
-			$this->assertSame("someService", (string)$reference);
-		} else {
-			$this->assertSame("someservice", (string)$reference);
-		}
+		$this->assertInstanceOf(Reference::class, $reference);
+		$this->assertSame("someService", (string)$reference);
 	}
 
 	public function testAutowireConstructorWithInterface()
 	{
-		$containerBuilder = new ContainerBuilder;
-		$autowiredServiceDefinition = $containerBuilder->setDefinition("autowiredService", new Definition(
-			"Skrz\\Bundle\\AutowiringBundle\\Tests\\DependencyInjection\\Compiler\\AutowiringCompilerPassSource\\InterfaceAutowiredClass"
-		));
-		$containerBuilder->setDefinition("someService", new Definition(
-			"Skrz\\Bundle\\AutowiringBundle\\Tests\\DependencyInjection\\Compiler\\AutowiringCompilerPassSource\\SomeClass"
-		));
+		$containerBuilder = new ContainerBuilder();
+		$classMultiMap = new ClassMultiMap($containerBuilder);
+		$classMapBuildCompilerPass = new ClassMapBuildCompilerPass($classMultiMap);
+		$autowiringCompilerPass = new AutowiringCompilerPass($classMultiMap, new AnnotationReader(), new PhpParser());
+
+		$autowiredServiceDefinition = $containerBuilder->setDefinition("autowiredService", new Definition(InterfaceAutowiredClass::class));
+		$containerBuilder->setDefinition("someService", new Definition(SomeClass::class));
 
 		$this->assertSame([], $autowiredServiceDefinition->getArguments());
 
-		$this->classMapBuildCompilerPass->process($containerBuilder);
-		$this->autowiringCompilerPass->process($containerBuilder);
+		$classMapBuildCompilerPass->process($containerBuilder);
+		$autowiringCompilerPass->process($containerBuilder);
 
 		$arguments = $autowiredServiceDefinition->getArguments();
 		$this->assertNotSame([], $arguments);
 
 		/** @var Reference $reference */
 		$reference = $arguments[0];
-		$this->assertInstanceOf("Symfony\\Component\\DependencyInjection\\Reference", $reference);
-		if (Kernel::VERSION_ID >= 30300) {
-			$this->assertSame("someService", (string)$reference);
-		} else {
-			$this->assertSame("someservice", (string)$reference);
-		}
+		$this->assertInstanceOf(Reference::class, $reference);
+		$this->assertSame("someService", (string)$reference);
 	}
 
 	public function testAutowireConstructorWithInterfaceOptionally()
 	{
-		$containerBuilder = new ContainerBuilder;
-		$service2Ref = new Reference('someService2');
+		$containerBuilder = new ContainerBuilder();
+		$classMultiMap = new ClassMultiMap($containerBuilder);
+		$classMapBuildCompilerPass = new ClassMapBuildCompilerPass($classMultiMap);
+		$autowiringCompilerPass = new AutowiringCompilerPass($classMultiMap, new AnnotationReader(), new PhpParser());
+
+		$service2Ref = new Reference("someService2");
 
 		$autowiredServiceDefinition = $containerBuilder->setDefinition("autowiredService", new Definition(
-			"Skrz\\Bundle\\AutowiringBundle\\Tests\\DependencyInjection\\Compiler\\AutowiringCompilerPassSource\\OptionalAutowiredClass",
+			OptionalAutowiredClass::class,
 			[
-				'someClass2' => $service2Ref,
+				"someClass2" => $service2Ref,
 			]
 		));
-		$containerBuilder->setDefinition("someService", new Definition(
-			"Skrz\\Bundle\\AutowiringBundle\\Tests\\DependencyInjection\\Compiler\\AutowiringCompilerPassSource\\SomeClass"
-		));
-		$containerBuilder->setDefinition("someService2", new Definition(
-			"Skrz\\Bundle\\AutowiringBundle\\Tests\\DependencyInjection\\Compiler\\AutowiringCompilerPassSource\\SomeClass2"
-		));
+		$containerBuilder->setDefinition("someService", new Definition(SomeClass::class));
+		$containerBuilder->setDefinition("someService2", new Definition(SomeClass2::class));
 
 		$containerBuilder->getParameterBag()->add([
-			'autowiring.preferred_services' => [
-				"Skrz\\Bundle\\AutowiringBundle\\Tests\\DependencyInjection\\Compiler\\AutowiringCompilerPassSource\\SomeInterface" => 'someService',
+			"autowiring.preferred_services" => [
+				SomeInterface::class => "someService",
 			]
 		]);
 
 		$this->assertSame(
 			[
-				'someClass2' => $service2Ref,
+				"someClass2" => $service2Ref,
 			],
 			$autowiredServiceDefinition->getArguments()
 		);
 
-		$this->classMapBuildCompilerPass->process($containerBuilder);
-		$this->autowiringCompilerPass->process($containerBuilder);
+		$classMapBuildCompilerPass->process($containerBuilder);
+		$autowiringCompilerPass->process($containerBuilder);
 
 		$arguments = $autowiredServiceDefinition->getArguments();
 		$this->assertNotSame([], $arguments);
 
 		/** @var Reference $reference */
 		$reference = $arguments[0];
-		$this->assertInstanceOf("Symfony\\Component\\DependencyInjection\\Reference", $reference);
-		if (Kernel::VERSION_ID >= 30300) {
-			$this->assertSame("someService", (string)$reference);
-		} else {
-			$this->assertSame("someservice", (string)$reference);
-		}
+		$this->assertInstanceOf(Reference::class, $reference);
+		$this->assertSame("someService", (string)$reference);
 
 		$reference = $arguments[1];
-		$this->assertInstanceOf("Symfony\\Component\\DependencyInjection\\Reference", $reference);
-		if (Kernel::VERSION_ID >= 30300) {
-			$this->assertSame("someService2", (string)$reference);
-		} else {
-			$this->assertSame("someservice2", (string)$reference);
-		}
+		$this->assertInstanceOf(Reference::class, $reference);
+		$this->assertSame("someService2", (string)$reference);
 	}
+
 }

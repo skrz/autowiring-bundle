@@ -62,7 +62,7 @@ class AutowiringCompilerPass implements CompilerPassInterface
 		try {
 			$fastAnnotationChecksRegex = "/" . implode("|", array_map(function ($s) {
 					return preg_quote($s);
-			}, (array)$parameterBag->resolveValue("%autowiring.fast_annotation_checks%"))) . "/";
+				}, (array)$parameterBag->resolveValue("%autowiring.fast_annotation_checks%"))) . "/";
 		} catch (ParameterNotFoundException $exception) {
 			$fastAnnotationChecksRegex = null;
 		}
@@ -74,7 +74,10 @@ class AutowiringCompilerPass implements CompilerPassInterface
 
 			try {
 				$className = $parameterBag->resolveValue($definition->getClass());
-				$reflectionClass = new ReflectionClass($className);
+				$reflectionClass = $container->getReflectionClass($className, false);
+				if ($reflectionClass === null) {
+					continue;
+				}
 
 				$this->autowireClass(
 					$className,
@@ -86,11 +89,7 @@ class AutowiringCompilerPass implements CompilerPassInterface
 				);
 
 				// add files to cache
-				if (method_exists($container, 'addObjectResource')) {
-					$container->addObjectResource($reflectionClass);
-				} elseif (method_exists($container, 'addClassResource')) {
-					$container->addClassResource($reflectionClass);
-				}
+				$container->addObjectResource($reflectionClass);
 
 			} catch (AutowiringException $exception) {
 				throw new AutowiringException(
@@ -111,11 +110,11 @@ class AutowiringCompilerPass implements CompilerPassInterface
 	 * @param ParameterBagInterface $parameterBag
 	 */
 	private function autowireClass(
-		$className,
+		string $className,
 		ReflectionClass $reflectionClass,
 		Definition $definition,
-		$fastAnnotationChecksRegex,
-		$preferredServices,
+		?string $fastAnnotationChecksRegex,
+		array $preferredServices,
 		ParameterBagInterface $parameterBag
 	) {
 		// constructor - autowire always
@@ -149,10 +148,7 @@ class AutowiringCompilerPass implements CompilerPassInterface
 				}
 
 				/** @var Autowired $annotation */
-				$annotation = $this->annotationReader->getMethodAnnotation(
-					$reflectionMethod,
-					"Skrz\\Bundle\\AutowiringBundle\\Annotation\\Autowired"
-				);
+				$annotation = $this->annotationReader->getMethodAnnotation($reflectionMethod, Autowired::class);
 
 				if ($annotation === null) {
 					continue;
@@ -289,11 +285,11 @@ class AutowiringCompilerPass implements CompilerPassInterface
 	 * @return array
 	 */
 	private function autowireMethod(
-		$className,
+		string $className,
 		ReflectionMethod $reflectionMethod,
 		array $arguments,
-		$preferredServices
-	) {
+		array $preferredServices
+	): array {
 		$outputArguments = [];
 
 		foreach ($reflectionMethod->getParameters() as $i => $reflectionProperty) {
@@ -324,8 +320,8 @@ class AutowiringCompilerPass implements CompilerPassInterface
 							$reflectionProperty->getPosition() !== 0 ? "..., " : "",
 							$reflectionProperty->getName(),
 							$reflectionProperty->getPosition() < $reflectionMethod->getNumberOfParameters() - 1
-							? ", ..."
-							: ""
+								? ", ..."
+								: ""
 						),
 						$exception->getCode(),
 						$exception
@@ -373,9 +369,10 @@ class AutowiringCompilerPass implements CompilerPassInterface
 				$isArray = isset($m[2]) && $m[2] === "[]";
 
 			} elseif (!$defaultValueAvailable) {
-				throw new AutowiringException(
-					"Could not parse parameter type - neither type hint, nor @param annotation available."
-				);
+				throw new AutowiringException(sprintf(
+					"Could not parse parameter type of class %s - neither type hint, nor @param annotation available.",
+					$reflectionClass->getName()
+				));
 			}
 
 		} else { // parse property class
@@ -422,7 +419,7 @@ class AutowiringCompilerPass implements CompilerPassInterface
 				if (isset($preferredServices[$className])) {
 					return new Reference($preferredServices[$className]);
 				} else {
-					throw new AutowiringException(sprintf("Multiple services of type '%s'.", $className));
+					throw new AutowiringException(sprintf("Multiple services of type '%s': %s", $className, $exception->getMessage()));
 				}
 			}
 
@@ -438,7 +435,7 @@ class AutowiringCompilerPass implements CompilerPassInterface
 	 * @param ReflectionClass $reflectionClass
 	 * @return string[]
 	 */
-	public function getUseStatements(ReflectionClass $reflectionClass)
+	public function getUseStatements(ReflectionClass $reflectionClass): array
 	{
 		if (!isset($this->cachedUseStatements[$reflectionClass->getName()])) {
 			$this->cachedUseStatements[$reflectionClass->getName()] = $this->phpParser->parseClass($reflectionClass);
@@ -450,7 +447,7 @@ class AutowiringCompilerPass implements CompilerPassInterface
 	/**
 	 * @return array
 	 */
-	private function getIgnoredServicePatterns()
+	private function getIgnoredServicePatterns(): array
 	{
 		try {
 			return (array)$this->parameterBag->resolveValue("%autowiring.ignored_services%");
@@ -462,10 +459,14 @@ class AutowiringCompilerPass implements CompilerPassInterface
 	/**
 	 * @param string $serviceId
 	 * @param Definition $definition
-	 * @return boolean
+	 * @return bool
 	 */
-	private function canDefinitionBeAutowired($serviceId, Definition $definition)
+	private function canDefinitionBeAutowired($serviceId, Definition $definition): bool
 	{
+		if (preg_match('/^\d+_[^~]++~[._a-zA-Z\d]{7}$/', $serviceId)) {
+			return false;
+		}
+
 		foreach ($this->getIgnoredServicePatterns() as $pattern) {
 			if (($pattern[0] === "/" && preg_match($pattern, $serviceId)) ||
 				strcasecmp($serviceId, $pattern) == 0
@@ -476,7 +477,6 @@ class AutowiringCompilerPass implements CompilerPassInterface
 
 		if ($definition->isAbstract() ||
 			$definition->isSynthetic() ||
-			!$definition->isPublic() ||
 			!$definition->getClass() ||
 			$definition->getFactory()
 		) {
@@ -485,4 +485,5 @@ class AutowiringCompilerPass implements CompilerPassInterface
 
 		return true;
 	}
+
 }

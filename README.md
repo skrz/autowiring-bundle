@@ -6,7 +6,7 @@
 [![Downloads this Month](https://img.shields.io/packagist/dm/skrz/autowiring-bundle.svg?style=flat-square)](https://packagist.org/packages/skrz/autowiring-bundle)
 [![Latest stable](https://img.shields.io/packagist/v/skrz/autowiring-bundle.svg?style=flat-square)](https://packagist.org/packages/skrz/autowiring-bundle)
 
-> Writing `services.yml` is boring, it should be automated. `Skrz\Bundle\AutowiringBundle` automates `services.yml` management.
+> Annotation-based autowiring for Symfony 4 dependency injection container
 
 ## Installation
 
@@ -16,7 +16,7 @@ Add as [Composer](https://getcomposer.org/) dependency:
 $ composer require skrz/autowiring-bundle
 ```
 
-Then add `AutowiringBundle` to Symfony Kernel:
+Then add `SkrzAutowiringBundle` to Symfony Kernel:
 
 ```php
 use Skrz\Bundle\AutowiringBundle\SkrzAutowiringBundle;
@@ -38,7 +38,7 @@ class AppKernel
 
 ## Usage
 
-Annotate your application components using `@Component` annotation and its subclasses - they are called "stereotypes".
+Annotate your application components using `@Component` annotation and its subclasses, or so called "stereotypes".
 Predefined stereotypes are `@Controller`, `@Repository`, and `@Service`, e.g.:
 
 ```php
@@ -60,12 +60,11 @@ Create your own application stereotypes by subclassing `@Component`.
 ```yaml
 // services.yml
 services:
-  controller.homepage:
-    class: HomepageController
+  Example\HomepageController: ~
 ```
 
 ```php
-// HomepageController.php
+namespace Example;
 
 use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
 
@@ -101,14 +100,13 @@ to configure your service the following way:
 ```yaml
 // services.yml
 services:
-  controller.homepage:
-    class: HomepageController
+  Example\HomepageController:
     arguments: 
-        someParameter: %kernel.whatever%
+      someParameter: %kernel.whatever%
 ```
 
 ```php
-// HomepageController.php
+namespace Example;
 
 use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
 
@@ -139,7 +137,7 @@ class HomepageController
 }
 ```
 
-The $someService argument is autowired and the $someParameter argument is injected depending on the configuration.
+The `$someService` argument is autowired and the `$someParameter` argument is injected depending on the configuration.
 
 ### Method dependency injection
 
@@ -147,12 +145,11 @@ The $someService argument is autowired and the $someParameter argument is inject
 // services.yml
 
 services:
-  controller.homepage:
-    class: HomepageController
+  Example\HomepageController: ~
 ```
 
 ```php
-// HomepageController.php
+namespace Example;
 
 use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
 use Skrz\Bundle\AutowiringBundle\Annotation\Autowired;
@@ -190,12 +187,11 @@ class HomepageController
 // services.yml
 
 services:
-  controller.homepage:
-    class: HomepageController
+  Example\HomepageController: ~
 ```
 
 ```php
-// HomepageController.php
+namespace Example;
 
 use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
 use Skrz\Bundle\AutowiringBundle\Annotation\Autowired;
@@ -224,16 +220,15 @@ Note: using property dependency injection is quite addictive.
 
 You can also inject container parameters using `@Value` annotation.
 
-```yml
+```yaml
 // services.yml
 
 services:
-  controller.homepage:
-    class: HomepageController
+  Example\HomepageController: ~
 ```
 
 ```php
-// HomepageController.php
+namespace Example;
 
 use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
 use Skrz\Bundle\AutowiringBundle\Annotation\Value;
@@ -256,21 +251,25 @@ class HomepageController
 }
 ```
 
-Protip: inject always scalar values, do not inject arrays. When you inject scalar values, their presence in container
+Pro-Tip: inject always scalar values, do not inject arrays. When you inject scalar values, their presence in container
 is validated during container compilation.
 
 ### Autoscan
 
+Autoscan was a feature of version 1.x of `SkrzAutowiringBundle`. However, since Symfony 4.0, container supports
+[this feature](https://symfony.com/doc/current/service_container.html#importing-many-services-at-once-with-resource)
+natively. Therefore, it was removed from the bundle and you should use `resource` key to import directories of services.
+
 ```yml
 // services.yml
 
-autowiring:
-  autoscan_psr4:
-    "": %kernel.root_dir%/path/to/controllers
+services:
+  Example\:
+    resource: "../path/to/controllers/*Controller.php"
 ```
 
 ```php
-// HomepageController.php
+namespace Example;
 
 use Skrz\Bundle\AutowiringBundle\Annotation\Controller;
 use Skrz\Bundle\AutowiringBundle\Annotation\Autowired;
@@ -317,17 +316,7 @@ autowiring:
 
   # if you create your own stereotypes, you must add then here
   fast_annotation_checks: [ @Task, @Widget ]
-
-  # add directories to be scanned
-  autoscan_psr4:
-    Skrz\Controller: %kernel.root_dir%/src/Skrz/Controller
-    Skrz\Repository: %kernel.root_dir%/src/Skrz/Repository
-    Skrz\Service: %kernel.root_dir%/src/Skrz/Service
 ```
-
-## Known limitations
-
-- Autoscan currently depends on `grep` utility is present in `PATH`. Therefore it won't work on Windows.
 
 ## License
 

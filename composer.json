@@ -1,26 +1,26 @@
 {
-    "name": "skrz/autowiring-bundle",
-    "description": "Symfony bundle providing autowiring/autoscanning capabilities to DI container",
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "Jakub Kulhan",
-            "email": "jakub.kulhan@gmail.com"
-        }
-    ],
-    "require": {
-        "php": ">=5.5.9",
-        "doctrine/annotations": "~1.2",
-        "symfony/config": "~2.7|~3.0|~4.0",
-        "symfony/dependency-injection": "~2.7|~3.0|~4.0",
-        "symfony/http-kernel": "~2.7|~3.0|~4.0"
-    },
-    "autoload": {
-        "psr-4": {
-            "Skrz\\Bundle\\AutowiringBundle\\": ""
-        }
-    },
-    "require-dev": {
-        "phpunit/phpunit": "~4.6"
+  "name": "skrz/autowiring-bundle",
+  "description": "Annotation-based autowiring for Symfony 4 dependency injection container",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Jakub Kulhan",
+      "email": "jakub.kulhan@gmail.com"
     }
+  ],
+  "require": {
+    "php": "~7.1",
+    "doctrine/annotations": "~1.5",
+    "symfony/config": "~3.4|~4.0",
+    "symfony/dependency-injection": "~4.0",
+    "symfony/http-kernel": "~4.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Skrz\\Bundle\\AutowiringBundle\\": ""
+    }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "~6.5"
+  }
 }

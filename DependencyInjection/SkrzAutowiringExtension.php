@@ -40,9 +40,6 @@ class SkrzAutowiringExtension extends Extension implements ConfigurationInterfac
 		$fastAnnotationChecksEnabledNode = $rootNode->children()->booleanNode("fast_annotation_checks_enabled");
 		$fastAnnotationChecksEnabledNode->defaultValue(true);
 
-		$autoscanPsr4Node = $rootNode->children()->arrayNode("autoscan_psr4");
-		$autoscanPsr4Node->defaultValue([])->prototype("scalar");
-
 		return $treeBuilder;
 	}
 
@@ -54,7 +51,6 @@ class SkrzAutowiringExtension extends Extension implements ConfigurationInterfac
 		$autowiringConfig = $this->processConfiguration($this, $config);
 		$container->setParameter("autowiring.ignored_services", $autowiringConfig["ignored_services"]);
 		$container->setParameter("autowiring.preferred_services", $autowiringConfig["preferred_services"]);
-		$container->setParameter("autowiring.autoscan_psr4", $autowiringConfig["autoscan_psr4"]);
 
 		if ($autowiringConfig["fast_annotation_checks_enabled"]) {
 			$container->setParameter("autowiring.fast_annotation_checks", array_merge([

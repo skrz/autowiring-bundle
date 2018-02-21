@@ -1,16 +1,17 @@
 <?php
 namespace Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection;
 
-use PHPUnit_Framework_TestCase;
+use PHPUnit\Framework\TestCase;
 use Skrz\Bundle\AutowiringBundle\DependencyInjection\SkrzAutowiringExtension;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
+use Symfony\Component\Config\Definition\Exception\InvalidTypeException;
 use Symfony\Component\Config\Definition\Processor;
 
-class SkrzAutowiringExtensionConfigTreeTest extends PHPUnit_Framework_TestCase
+class SkrzAutowiringExtensionConfigTreeTest extends TestCase
 {
 
 	/** @var SkrzAutowiringExtension */
-	private $autowiringExtension;
+	private $extension;
 
 	/** @var TreeBuilder */
 	private $configTreeBuilder;
@@ -20,88 +21,134 @@ class SkrzAutowiringExtensionConfigTreeTest extends PHPUnit_Framework_TestCase
 
 	protected function setUp()
 	{
-		$this->autowiringExtension = new SkrzAutowiringExtension;
-		$this->configTreeBuilder = $this->autowiringExtension->getConfigTreeBuilder();
-		$this->processor = new Processor;
+		$this->extension = new SkrzAutowiringExtension();
+		$this->configTreeBuilder = $this->extension->getConfigTreeBuilder();
+		$this->processor = new Processor();
 	}
 
-	public function testConfigWithNoArray()
+
+	public function testRootInvalid()
 	{
-		$this->setExpectedException("Symfony\\Component\\Config\\Definition\\Exception\\InvalidTypeException");
-		$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring"]);
+		$this->expectException(InvalidTypeException::class);
+		$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => false]);
 	}
 
-	public function testConfigTreeBuilder()
+	public function testRootNull()
 	{
-		$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => []]);
+		$this->assertEquals(
+			[
+				"ignored_services" => [],
+				"preferred_services" => [],
+				"fast_annotation_checks" => [],
+				"fast_annotation_checks_enabled" => true,
+			],
+			$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => null])
+		);
 	}
 
-	public function testIgnoredServicesWithNoArray()
+	public function testRootEmptyArray()
 	{
-		$this->setExpectedException("Symfony\\Component\\Config\\Definition\\Exception\\InvalidTypeException");
+		$this->assertEquals(
+			[
+				"ignored_services" => [],
+				"preferred_services" => [],
+				"fast_annotation_checks" => [],
+				"fast_annotation_checks_enabled" => true,
+			],
+			$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => []])
+		);
+	}
+
+	public function testIgnoredServicesInvalid()
+	{
+		$this->expectException(InvalidTypeException::class);
 		$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => [
-			"ignored_services" => ""
+			"ignored_services" => "",
 		]]);
 	}
 
-	public function testPreferredServicesWithNoArray()
+	public function testIgnoredServices()
 	{
-		$this->setExpectedException("Symfony\\Component\\Config\\Definition\\Exception\\InvalidTypeException");
+		$this->assertEquals(
+			[
+				"ignored_services" => ["foo"],
+				"preferred_services" => [],
+				"fast_annotation_checks" => [],
+				"fast_annotation_checks_enabled" => true,
+			],
+			$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => [
+				"ignored_services" => ["foo"]
+			]])
+		);
+	}
+
+	public function testPreferredServicesInvalid()
+	{
+		$this->expectException(InvalidTypeException::class);
 		$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => [
-			"preferred_services" => ""
+			"preferred_services" => "",
 		]]);
 	}
 
 	public function testPreferredServices()
 	{
-		$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => [
-			"preferred_services" => []
-		]]);
+		$this->assertEquals(
+			[
+				"ignored_services" => [],
+				"preferred_services" => ["bar"],
+				"fast_annotation_checks" => [],
+				"fast_annotation_checks_enabled" => true,
+			],
+			$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => [
+				"preferred_services" => ["bar"]
+			]])
+		);
 	}
 
-	public function testFastAnnotationChecksWithNoArray()
+	public function testFastAnnotationChecksInvalid()
 	{
-		$this->setExpectedException("Symfony\\Component\\Config\\Definition\\Exception\\InvalidTypeException");
+		$this->expectException(InvalidTypeException::class);
 		$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => [
-			"fast_annotation_checks" => ""
+			"fast_annotation_checks" => "",
 		]]);
 	}
 
 	public function testFastAnnotationChecks()
 	{
-		$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => [
-			"fast_annotation_checks" => []
-		]]);
+		$this->assertEquals(
+			[
+				"ignored_services" => [],
+				"preferred_services" => [],
+				"fast_annotation_checks" => ["@Foo", "@Bar"],
+				"fast_annotation_checks_enabled" => true,
+			],
+			$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => [
+				"fast_annotation_checks" => ["@Foo", "@Bar"],
+			]])
+		);
 	}
 
-	public function testFastAnnotationChecksEnabledIncorrectType()
+	public function testFastAnnotationChecksEnabledInvalid()
 	{
-		$this->setExpectedException("Symfony\\Component\\Config\\Definition\\Exception\\InvalidTypeException");
+		$this->expectException(InvalidTypeException::class);
 		$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => [
-			"fast_annotation_checks_enabled" => ""
+			"fast_annotation_checks_enabled" => "",
 		]]);
 	}
 
 	public function testFastAnnotationChecksEnabled()
 	{
-		$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => [
-			"fast_annotation_checks_enabled" => false
-		]]);
-	}
-
-	public function testAutoscanPsr4IncorrectType()
-	{
-		$this->setExpectedException("Symfony\\Component\\Config\\Definition\\Exception\\InvalidTypeException");
-		$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => [
-			"autoscan_psr4" => ""
-		]]);
-	}
-
-	public function testAutoscanPsr4()
-	{
-		$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => [
-			"autoscan_psr4" => []
-		]]);
+		$this->assertEquals(
+			[
+				"ignored_services" => [],
+				"preferred_services" => [],
+				"fast_annotation_checks" => [],
+				"fast_annotation_checks_enabled" => false,
+			],
+			$this->processor->process($this->configTreeBuilder->buildTree(), ["autowiring" => [
+				"fast_annotation_checks_enabled" => false,
+			]])
+		);
 	}
 
 }

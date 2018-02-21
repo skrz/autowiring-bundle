@@ -1,96 +1,74 @@
 <?php
 namespace Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection\Compiler;
 
-use PHPUnit_Framework_Assert;
-use PHPUnit_Framework_TestCase;
+use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface as PsrContainerInterface;
 use Skrz\Bundle\AutowiringBundle\DependencyInjection\ClassMultiMap;
 use Skrz\Bundle\AutowiringBundle\DependencyInjection\Compiler\ClassMapBuildCompilerPass;
+use Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection\ClassMultipleMapSource\SomeClass;
+use Skrz\Bundle\AutowiringBundle\Tests\DependencyInjection\ClassMultipleMapSource\SomeInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
-use Symfony\Component\HttpKernel\Kernel;
 
-class ClassMapBuildCompilerPassTest extends PHPUnit_Framework_TestCase
+class ClassMapBuildCompilerPassTest extends TestCase
 {
 
-	/** @var string */
-	const SOME_CLASS_NAME = "Skrz\\Bundle\\AutowiringBundle\\Tests\\DependencyInjection\\ClassMultipleMapSource\\SomeClass";
-
-	/** @var ClassMultiMap */
-	private $classMultiMap;
-
-	/** @var ClassMapBuildCompilerPass */
-	private $classMapBuildCompilerPass;
-
-	protected function setUp()
-	{
-		$this->classMultiMap = new ClassMultiMap;
-		$this->classMapBuildCompilerPass = new ClassMapBuildCompilerPass($this->classMultiMap);
-	}
+	const EMPTY_BUILDER_MAP = [
+		PsrContainerInterface::class => ["service_container"],
+		ContainerInterface::class => ["service_container"],
+	];
 
 	public function testProcessEmpty()
 	{
-		$containerBuilder = new ContainerBuilder;
-		$this->classMapBuildCompilerPass->process($containerBuilder);
-		$container = $this->getClassMapBuildClasses();
+		$containerBuilder = new ContainerBuilder();
+		$map = new ClassMultiMap(new ContainerBuilder());
+		$pass = new ClassMapBuildCompilerPass($map);
 
-		$this->assertSame([], $container);
+		$pass->process($containerBuilder);
+		$container = $map->all();
+
+		$this->assertSame(static::EMPTY_BUILDER_MAP, $container);
 	}
 
 	public function testProcess()
 	{
-		$containerBuilder = new ContainerBuilder;
-		$containerBuilder->setDefinition("someService", new Definition(self::SOME_CLASS_NAME));
-		$this->classMapBuildCompilerPass->process($containerBuilder);
-		$serviceName = Kernel::VERSION_ID >= 30300 ? "someService" : "someservice";
+		$containerBuilder = new ContainerBuilder();
+		$map = new ClassMultiMap(new ContainerBuilder());
+		$pass = new ClassMapBuildCompilerPass($map);
 
-		$this->assertSame([
-			"Skrz\\Bundle\\AutowiringBundle\\Tests\\DependencyInjection\\ClassMultipleMapSource\\SomeInterface" => [$serviceName],
-			self::SOME_CLASS_NAME => [$serviceName]
-		], $this->getClassMapBuildClasses());
-	}
-
-	public function testSkipPrivate()
-	{
-		$containerBuilder = new ContainerBuilder;
-		$containerBuilder->setDefinition("someService", new Definition(self::SOME_CLASS_NAME))
-			->setPublic(false);
-		$this->classMapBuildCompilerPass->process($containerBuilder);
-
-		$this->assertSame([], $this->getClassMapBuildClasses());
+		$containerBuilder
+			->setDefinition("someService", new Definition(SomeClass::class));
+		$pass->process($containerBuilder);
+		$this->assertSame(array_merge(static::EMPTY_BUILDER_MAP, [
+			SomeInterface::class => ["someService"],
+			SomeClass::class => ["someService"]
+		]), $map->all());
 	}
 
 	public function testSkipEmptyClass()
 	{
-		$containerBuilder = new ContainerBuilder;
-		$containerBuilder->setDefinition("someService", new Definition);
-		$this->classMapBuildCompilerPass->process($containerBuilder);
+		$containerBuilder = new ContainerBuilder();
+		$map = new ClassMultiMap(new ContainerBuilder());
+		$pass = new ClassMapBuildCompilerPass($map);
 
-		$this->assertSame([], $this->getClassMapBuildClasses());
+		$containerBuilder
+			->setDefinition("someService", new Definition());
+		$pass->process($containerBuilder);
+		$this->assertSame(static::EMPTY_BUILDER_MAP, $map->all());
 	}
 
 	public function testSkipAbstract()
 	{
-		$containerBuilder = new ContainerBuilder;
-		$containerBuilder->setDefinition("someService", new Definition(self::SOME_CLASS_NAME))
+		$containerBuilder = new ContainerBuilder();
+		$map = new ClassMultiMap(new ContainerBuilder());
+		$pass = new ClassMapBuildCompilerPass($map);
+
+		$containerBuilder
+			->setDefinition("someService", new Definition(SomeClass::class))
 			->setAbstract(true);
-		$this->classMapBuildCompilerPass->process($containerBuilder);
-
-		$this->assertSame([], $this->getClassMapBuildClasses());
-	}
-
-	/**
-	 * @return string[]
-	 */
-	private function getClassMapBuildClasses()
-	{
-		$classes = PHPUnit_Framework_Assert::getObjectAttribute($this->classMultiMap, "classes");
-		//since SF3.3 container aliases are added in constructor
-		unset($classes[PsrContainerInterface::class]);
-		unset($classes[ContainerInterface::class]);
-
-		return $classes;
+		$pass->process($containerBuilder);
+		$this->assertSame(static::EMPTY_BUILDER_MAP, $map->all());
 	}
 
 }

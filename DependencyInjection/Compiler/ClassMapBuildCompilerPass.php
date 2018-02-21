@@ -30,16 +30,9 @@ class ClassMapBuildCompilerPass implements CompilerPassInterface
 		}
 	}
 
-	/**
-	 * @return bool
-	 */
-	private function canBeAdded(Definition $definition)
+	private function canBeAdded(Definition $definition): bool
 	{
 		if ($definition->isAbstract()) {
-			return false;
-		}
-
-		if (!$definition->isPublic()) {
 			return false;
 		}
 
