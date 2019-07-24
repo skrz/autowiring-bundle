@@ -6,6 +6,8 @@ use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\PhpParser;
 use ReflectionClass;
 use ReflectionMethod;
+use ReflectionParameter;
+use ReflectionProperty;
 use RuntimeException;
 use Skrz\Bundle\AutowiringBundle\Annotation\Autowired;
 use Skrz\Bundle\AutowiringBundle\Annotation\Value;
@@ -19,6 +21,7 @@ use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Exception\ParameterNotFoundException;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\DependencyInjection\Reference;
+use function array_merge;
 
 /**
  * @author Jakub Kulhan <jakub.kulhan@gmail.com>
@@ -213,12 +216,8 @@ class AutowiringCompilerPass implements CompilerPassInterface
 								$definition->setProperty(
 									$reflectionProperty->getName(),
 									$this->getValue(
-										$reflectionProperty->getDeclaringClass(),
+										$reflectionProperty,
 										$reflectionProperty->getDocComment(),
-										null,
-										null,
-										false,
-										null,
 										$preferredServices
 									)
 								);
@@ -301,12 +300,8 @@ class AutowiringCompilerPass implements CompilerPassInterface
 			} else {
 				try {
 					$outputArguments[$i] = $this->getValue(
-						$reflectionProperty->getDeclaringClass(),
+						$reflectionProperty,
 						$reflectionMethod->getDocComment(),
-						$reflectionProperty->getName(),
-						$reflectionProperty->getClass(),
-						$reflectionProperty->isDefaultValueAvailable(),
-						$reflectionProperty->isDefaultValueAvailable() ? $reflectionProperty->getDefaultValue() : null,
 						$preferredServices
 					);
 
@@ -334,53 +329,42 @@ class AutowiringCompilerPass implements CompilerPassInterface
 	}
 
 	/**
-	 * @param ReflectionClass $reflectionClass
+	 * @param ReflectionProperty|ReflectionParameter $target
 	 * @param string $docComment
-	 * @param string $parameterName
-	 * @param ReflectionClass $parameterReflectionClass
-	 * @param mixed $defaultValueAvailable
-	 * @param mixed $defaultValue
 	 * @param $preferredServices
 	 * @return mixed
 	 */
-	private function getValue(
-		ReflectionClass $reflectionClass,
-		$docComment,
-		$parameterName,
-		ReflectionClass $parameterReflectionClass = null,
-		$defaultValueAvailable,
-		$defaultValue,
-		$preferredServices
-	) {
+	private function getValue($target, $docComment, $preferredServices)
+	{
 		$className = null;
 		$isArray = false;
 
 		// resolve class name, whether value is array
-		if ($parameterName !== null) { // parse parameter class
-			if ($parameterReflectionClass) {
-				$className = $parameterReflectionClass->getName();
+		if ($target instanceof ReflectionParameter) { // parse parameter class
+			if ($target->getClass() !== null) {
+				$className = $target->getClass()->getName();
 
 			} elseif (preg_match(
-				"/@param\\s+([a-zA-Z0-9\\\\_]+)(\\[\\])?(\\|[^\\s]+)*\\s+\\\$" . preg_quote($parameterName) . "/",
+				"/@param\\s+([a-zA-Z0-9\\\\_]+)(\\[\\])?(\\|[^\\s]+)*\\s+\\\$" . preg_quote($target->getName()) . "/",
 				$docComment,
 				$m
 			)) {
 				$className = $m[1];
 				$isArray = isset($m[2]) && $m[2] === "[]";
 
-			} elseif (!$defaultValueAvailable) {
+			} elseif (!$target->isDefaultValueAvailable()) {
 				throw new AutowiringException(sprintf(
 					"Could not parse parameter type of class %s - neither type hint, nor @param annotation available.",
-					$reflectionClass->getName()
+					$target->getDeclaringClass()->getName()
 				));
 			}
 
-		} else { // parse property class
+		} else if ($target instanceof ReflectionProperty) { // parse property class
 			if (preg_match("/@var\\s+([a-zA-Z0-9\\\\_]+)(\\[\\])?/", $docComment, $m)) {
 				$className = $m[1];
 				$isArray = isset($m[2]) && $m[2] === "[]";
 
-			} elseif (!$defaultValueAvailable) {
+			} else {
 				throw new AutowiringException(
 					"Could not parse property type - no @var annotation."
 				);
@@ -389,11 +373,11 @@ class AutowiringCompilerPass implements CompilerPassInterface
 
 		// resolve class name to FQN
 		$lowerClassName = trim(strtolower($className), "\\ \t\n");
-		$useStatements = $this->getUseStatements($reflectionClass);
+		$useStatements = $this->getUseStatements($target);
 		if (isset($useStatements[$lowerClassName])) {
 			$className = $useStatements[$lowerClassName];
 		} elseif (strpos($className, "\\") === false) {
-			$className = $reflectionClass->getNamespaceName() . "\\" . $className;
+			$className = $target->getDeclaringClass()->getNamespaceName() . "\\" . $className;
 		}
 
 		$className = trim($className, "\\");
@@ -409,8 +393,8 @@ class AutowiringCompilerPass implements CompilerPassInterface
 				return new Reference($this->classMap->getSingle($className));
 
 			} catch (NoValueException $exception) {
-				if ($defaultValueAvailable) {
-					return $defaultValue;
+				if ($target instanceof ReflectionParameter && $target->isDefaultValueAvailable()) {
+					return $target->getDefaultValue();
 				} else {
 					throw new AutowiringException(sprintf("Missing service of type '%s'.", $className));
 				}
@@ -423,8 +407,8 @@ class AutowiringCompilerPass implements CompilerPassInterface
 				}
 			}
 
-		} elseif ($defaultValueAvailable) {
-			return $defaultValue;
+		} elseif ($target instanceof ReflectionParameter && $target->isDefaultValueAvailable()) {
+			return $target->getDefaultValue();
 
 		} else {
 			throw new AutowiringException("Could not autowire.");
@@ -432,10 +416,29 @@ class AutowiringCompilerPass implements CompilerPassInterface
 	}
 
 	/**
-	 * @param ReflectionClass $reflectionClass
+	 * @param ReflectionProperty|ReflectionParameter $target
 	 * @return string[]
 	 */
-	public function getUseStatements(ReflectionClass $reflectionClass): array
+	private function getUseStatements($target): array
+	{
+		$class = $target->getDeclaringClass();
+		$useStatements = $this->getClassUseStatements($class);
+		foreach ($class->getTraits() as $trait) {
+			if ($target instanceof ReflectionParameter &&
+				$trait->hasMethod($target->getDeclaringFunction()->getName()) &&
+				$target->getDeclaringFunction()->getFileName() === $trait->getFileName()
+			) {
+				$useStatements = array_merge($useStatements, $this->getClassUseStatements($trait));
+			} else if ($target instanceof ReflectionProperty &&
+				$trait->hasProperty($target->getName())
+			) {
+				$useStatements = array_merge($useStatements, $this->getClassUseStatements($trait));
+			}
+		}
+		return $useStatements;
+	}
+
+	private function getClassUseStatements(ReflectionClass $reflectionClass): array
 	{
 		if (!isset($this->cachedUseStatements[$reflectionClass->getName()])) {
 			$this->cachedUseStatements[$reflectionClass->getName()] = $this->phpParser->parseClass($reflectionClass);
